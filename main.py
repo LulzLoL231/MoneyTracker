@@ -9,6 +9,7 @@ from vkbottle import Bot
 
 from config import cfg
 from cmds import labelers
+from database.main import Database
 
 
 log = logging.getLogger('MoneyTracker')
@@ -19,4 +20,5 @@ for bl in labelers:
     bot.labeler.load(bl)
 
 if __name__ == '__main__':
+    bot.loop.create_task(Database._create_tables())
     bot.run_forever()
