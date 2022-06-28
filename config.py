@@ -9,9 +9,12 @@ from pydantic import BaseSettings, Field
 
 
 class Config(BaseSettings):
-    VERSION: str = '0.3'
+    VERSION: str = '0.3.1'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     TOKEN: str = Field(..., env='BOT_TOKEN')
+
+    class Config:
+        env_file = '.env'
 
 
 cfg = Config()
