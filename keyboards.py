@@ -5,7 +5,7 @@
 #
 from vkbottle import Keyboard, KeyboardButtonColor, Text
 
-from database.types import Agent
+from database.types import Agent, Order
 
 
 class Keyboards:
@@ -117,5 +117,110 @@ class Keyboards:
                 {'command': 'agents'}
             ),
             KeyboardButtonColor.SECONDARY
+        )
+        return key.get_json()
+
+    @staticmethod
+    def orders(orders: list[Order], with_his: bool = True) -> str:
+        '''Returns orders short names keyboard.
+
+        Args:
+            orders (list[Order]): Array of orders.
+            with_his (bool): Add history btn? Defaults is True.
+
+        Returns:
+            str: JSON string.
+        '''
+        key = Keyboard(True)
+        for ord in orders:
+            key.add(
+                Text(
+                    f'Заказ #{ord.uid}',
+                    {'command': f'order#{ord.uid}'}
+                ),
+                KeyboardButtonColor.PRIMARY
+            ).row()
+        key.add(
+            Text(
+                'Добавить',
+                {'command': 'add_order'}
+            ),
+            KeyboardButtonColor.POSITIVE
+        )
+        if with_his:
+            key.add(
+                Text(
+                    'История',
+                    {'command': 'orders_history'}
+                ),
+                KeyboardButtonColor.PRIMARY
+            )
+        key.row().add(
+            Text(
+                'Назад',
+                {'command': 'start'}
+            ),
+            KeyboardButtonColor.SECONDARY
+        )
+        return key.get_json()
+
+    @staticmethod
+    def order_ctrl(uid: int) -> str:
+        '''Returns order control keyboard.
+
+        Args:
+            uid (int): Order UID.
+
+        Returns:
+            str: JSON string.
+        '''
+        key = Keyboard(True)
+        key.add(
+            Text(
+                'Оплачен',
+                {'command': f'end_order#{uid}'}
+            ),
+            KeyboardButtonColor.POSITIVE
+        )
+        key.add(
+            Text(
+                'Удалить',
+                {'command': f'del_order#{uid}'}
+            ),
+            KeyboardButtonColor.NEGATIVE
+        ).row()
+        key.add(
+            Text(
+                'Назад',
+                {'command': 'orders'}
+            ),
+            KeyboardButtonColor.SECONDARY
+        )
+        return key.get_json()
+
+    @staticmethod
+    def add_order_agents(agents: list[Agent]) -> str:
+        '''Returns keyboard with agents.
+
+        Args:
+            agents (list[Agent]): Array of agents.
+
+        Returns:
+            str: JSON string.
+        '''
+        key = Keyboard(True)
+        for agent in agents:
+            key.add(
+                Text(
+                    agent.name,
+                    {'agent_uid': agent.uid}
+                ),
+                KeyboardButtonColor.PRIMARY
+            )
+        key.row().add(
+            Text(
+                'Назад',
+                {'command': 'orders'}
+            )
         )
         return key.get_json()
