@@ -5,19 +5,20 @@
 #
 import logging
 
-from vkbottle.bot import BotLabeler, Message
+from vkbottle.bot import BotBlueprint, Message
 from vkbottle.dispatch.rules.base import FuncRule
 
 from config import cfg
+from keyboards import Keyboards as keys
 from database.main import Database, DB_LOCK
 
 
 log = logging.getLogger('MoneyTracker')
-bl = BotLabeler()
+bp = BotBlueprint('defaults')
 
 
-@bl.message(FuncRule(lambda m: m.text.lower() in ['/start', 'начать']))
-@bl.message(payload={'command': 'start'})
+@bp.on.message(FuncRule(lambda m: m.text.lower() in ['/start', 'начать']))
+@bp.on.message(payload={'command': 'start'})
 async def start_bot(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
@@ -30,13 +31,12 @@ async def start_bot(msg: Message):
             cnt += f'{ord.get_short_str()}\n'
     else:
         cnt += 'Все заказы выполнены.'
-    await msg.answer(cnt)
+    await msg.answer(cnt, keyboard=keys.start())
 
 
-@bl.message(FuncRule(lambda m: m.text.lower() in ['/about', 'о боте']))
-@bl.message(payload={'command': 'about'})
+@bp.on.message(payload={'command': 'about'})
 async def about_bot(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     cnt = f'MoneyTracker\nОтслеживаем оплату заказов.\n\nСоздатель: @0x403\nВерсия: {cfg.VERSION}'
-    await msg.answer(cnt)
+    await msg.answer(cnt, keyboard=keys.start())

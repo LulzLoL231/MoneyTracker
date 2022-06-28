@@ -17,7 +17,7 @@ DB_LOCK = Lock()
 
 class Database:
     TABLES = [
-        'CREATE TABLE IF NOT EXISTS "agents" ("uid" TEXT PRIMARY KEY, "name" TEXT)',
+        'CREATE TABLE IF NOT EXISTS "agents" ("uid" INTEGER PRIMARY KEY, "name" TEXT)',
         'CREATE TABLE IF NOT EXISTS "orders" ("uid" INTEGER PRIMARY KEY, "name" TEXT, "price" INTEGER, "agent_uid" TEXT, "start_date" TEXT, "end_date" TEXT)'
     ]
     log = logging.getLogger('MoneyTracker Database')
@@ -119,6 +119,34 @@ class Database:
         return None
 
     @classmethod
+    async def get_orders(self) -> list[Order]:
+        '''Returns all orders.
+
+        Returns:
+            list[Order]: Array of orders.
+        '''
+        self.log.debug('Called!')
+        orders = []
+        sql = 'SELECT * FROM orders'
+        fetch = await self._dbcall_fetchall(sql)
+        for ord in fetch:
+            agent = await self.get_agent_by_uid(ord['agent_uid'])
+            if agent:
+                orders.append(Order(
+                    uid=ord['uid'],
+                    name=ord['name'],
+                    price=ord['price'],
+                    agent_uid=ord['agent_uid'],
+                    agent=Agent(**agent),
+                    start_date=ord['start_date'],
+                    end_date=ord.get('end_date', None)
+                ))
+            else:
+                self.log.error(
+                    f'Order #{ord["uid"]} have nonexistent Agent UID #{ord["agent_uid"]}')
+        return orders
+
+    @classmethod
     async def del_agent(self, uid: int) -> Literal[True]:
         '''Deletes Agent from DB.
 
@@ -158,31 +186,16 @@ class Database:
         )
 
     @classmethod
-    async def get_orders(self) -> list[Order]:
-        '''Returns all orders.
+    async def get_agents(self) -> list[Agent]:
+        '''Returns all agents.
 
         Returns:
-            list[Order]: Array of orders.
+            list[Agents]: Array of agents.
         '''
         self.log.debug('Called!')
-        orders = []
-        sql = 'SELECT * FROM orders'
+        sql = 'SELECT * FROM agents'
         fetch = await self._dbcall_fetchall(sql)
-        for ord in fetch:
-            agent = await self.get_agent_by_uid(ord['agent_uid'])
-            if agent:
-                orders.append(Order(
-                    uid=ord['uid'],
-                    name=ord['name'],
-                    price=ord['price'],
-                    agent_uid=ord['agent_uid'],
-                    agent=Agent(**agent),
-                    start_date=ord['start_date'],
-                    end_date=ord.get('end_date', None)
-                ))
-            else:
-                self.log.error(f'Order #{ord["uid"]} have nonexistent Agent UID #{ord["agent_uid"]}')
-        return orders
+        return [Agent(**i) for i in fetch]
 
     @classmethod
     async def get_order_by_uid(self, uid: int) -> Order | None:

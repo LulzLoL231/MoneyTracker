@@ -1,6 +1,8 @@
 from . import defaults
+from . import agents
 
 
-labelers = [
-    defaults.bl
+blueprints = [
+    defaults.bp,
+    agents.bp
 ]

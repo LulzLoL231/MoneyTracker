@@ -8,7 +8,7 @@ import logging
 from vkbottle import Bot
 
 from config import cfg
-from cmds import labelers
+from cmds import blueprints
 from database.main import Database
 
 
@@ -16,8 +16,8 @@ log = logging.getLogger('MoneyTracker')
 log.info(f'Loading v{cfg.VERSION}...')
 bot = Bot(cfg.TOKEN)
 
-for bl in labelers:
-    bot.labeler.load(bl)
+for bp in blueprints:
+    bp.load(bot)
 
 if __name__ == '__main__':
     bot.loop.create_task(Database._create_tables())
