@@ -74,7 +74,7 @@ class Database:
         async with aiosqlite.connect('bot.db') as db:
             db.row_factory = aiosqlite.Row
             cur = await db.execute(sql, params)
-            return [i for i in (await cur.fetchall())]
+            return [dict(i) for i in (await cur.fetchall())]
 
     @classmethod
     async def _create_tables(self):
@@ -137,7 +137,7 @@ class Database:
                     name=ord['name'],
                     price=ord['price'],
                     agent_uid=ord['agent_uid'],
-                    agent=Agent(**agent),
+                    agent=agent,
                     start_date=ord['start_date'],
                     end_date=ord.get('end_date', None)
                 ))
@@ -212,14 +212,14 @@ class Database:
         params = (uid,)
         fetch = await self._dbcall_fetchone(sql, params)
         if fetch:
-            agent = self.get_agent_by_uid(fetch['agent_uid'])
+            agent = await self.get_agent_by_uid(fetch['agent_uid'])
             if agent:
                 return Order(
                     uid=fetch['uid'],
                     name=fetch['name'],
                     price=fetch['price'],
                     agent_uid=fetch['agent_uid'],
-                    agent=Agent(**agent),
+                    agent=agent,
                     start_date=fetch['start_date'],
                     end_date=fetch.get('end_date', None)
                 )

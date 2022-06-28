@@ -9,6 +9,10 @@ from database.types import Agent, Order
 
 
 class Keyboards:
+    YES_TEXTS = [
+        'Да', 'да', 'y', 'yes', 'Yes', 'д'
+    ]
+
     @staticmethod
     def start() -> str:
         '''Returns start keyboard.
@@ -54,7 +58,7 @@ class Keyboards:
                 'Назад',
                 {'command': command}
             ),
-            KeyboardButtonColor.PRIMARY
+            KeyboardButtonColor.SECONDARY
         )
         return key.get_json()
 
@@ -132,6 +136,7 @@ class Keyboards:
             str: JSON string.
         '''
         key = Keyboard(True)
+        flag = False
         for ord in orders:
             key.add(
                 Text(
@@ -139,8 +144,13 @@ class Keyboards:
                     {'command': f'order#{ord.uid}'}
                 ),
                 KeyboardButtonColor.PRIMARY
-            ).row()
-        key.add(
+            )
+            if flag:
+                flag = False
+                key.row()
+            else:
+                flag = True
+        key.row().add(
             Text(
                 'Добавить',
                 {'command': 'add_order'}
@@ -216,11 +226,56 @@ class Keyboards:
                     {'agent_uid': agent.uid}
                 ),
                 KeyboardButtonColor.PRIMARY
-            )
-        key.row().add(
+            ).row()
+        key.add(
             Text(
                 'Назад',
                 {'command': 'orders'}
             )
+        )
+        return key.get_json()
+
+    @staticmethod
+    def verify() -> str:
+        '''Yes/No keyboard.
+
+        Returns:
+            str: JSON string.
+        '''
+        key = Keyboard(True)
+        key.add(
+            Text('Да'),
+            KeyboardButtonColor.POSITIVE
+        )
+        key.add(
+            Text('Нет'),
+            KeyboardButtonColor.NEGATIVE
+        )
+        return key.get_json()
+
+    @staticmethod
+    def order_btn(uid: int) -> str:
+        '''Returns keyboard with order and back btns.
+
+        Args:
+            uid (int): Order UID.
+
+        Returns:
+            str: JSON string.
+        '''
+        key = Keyboard(True)
+        key.add(
+            Text(
+                f'Заказ #{uid}',
+                {'command': f'order#{uid}'}
+            ),
+            KeyboardButtonColor.POSITIVE
+        ).row()
+        key.add(
+            Text(
+                'Назад',
+                {'command': 'orders'}
+            ),
+            KeyboardButtonColor.SECONDARY
         )
         return key.get_json()

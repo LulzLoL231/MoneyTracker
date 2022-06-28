@@ -24,8 +24,10 @@ class AddAgent(BaseStateGroup):
 
 
 def is_del_agent_cmd(payload: str) -> bool:
-    pd = json.loads(payload)
-    return pd['command'].startswith('del_agent#')
+    if payload:
+        pd = json.loads(payload)
+        return pd.get('command', '').startswith('del_agent#')
+    return False
 
 
 @bp.on.private_message(FuncRule(lambda m: m.text.lower() in ['/agents', 'агенты']))

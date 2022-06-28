@@ -30,7 +30,7 @@ class Order(BaseModel):
 {}'''
         tmp_sd = 'Начало: {}'
         tmp_sd_ed = 'Начало: {}\nКонец: {}'
-        if self.end_date:
+        if not self.end_date:
             return tmp_cnt.format(
                 self.uid, self.name, self.price,
                 self.agent.name, tmp_sd.format(

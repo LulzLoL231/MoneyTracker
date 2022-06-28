@@ -27,8 +27,11 @@ async def start_bot(msg: Message):
     cnt = f'Привет {user.first_name}!\n\n'
     if orders:
         cnt += 'Текущие заказы:\n'
-        for ord in filter((lambda o: o.end_date), orders):
+        full_price = 0
+        for ord in filter((lambda o: not o.end_date), orders):
             cnt += f'{ord.get_short_str()}\n'
+            full_price += ord.price
+        cnt += f'\nИтого: {full_price} руб.'
     else:
         cnt += 'Все заказы выполнены.'
     await msg.answer(cnt, keyboard=keys.start())
