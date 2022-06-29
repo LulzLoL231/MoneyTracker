@@ -9,7 +9,7 @@ from pydantic import BaseSettings, Field
 
 
 class Config(BaseSettings):
-    VERSION: str = '0.3.1'
+    VERSION: str = '0.3.2'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     TOKEN: str = Field(..., env='BOT_TOKEN')
 

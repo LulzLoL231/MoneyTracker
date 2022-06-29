@@ -150,7 +150,9 @@ class Keyboards:
                 key.row()
             else:
                 flag = True
-        key.row().add(
+        if flag:
+            key.row()
+        key.add(
             Text(
                 'Добавить',
                 {'command': 'add_order'}
