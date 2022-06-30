@@ -5,12 +5,17 @@
 #
 import json
 import logging
+from io import BytesIO
 
+from openpyxl import Workbook
+from openpyxl.styles import Font
 from vkbottle.bot import Message
+from vkbottle.tools import DocMessagesUploader
 from vkbottle import BaseStateGroup, BotBlueprint
 from vkbottle.dispatch.rules.base import FuncRule, StateRule
 
 from config import cfg
+from database.types import Order
 from keyboards import Keyboards as keys
 from database.main import Database, DB_LOCK
 
@@ -24,6 +29,56 @@ class AddOrder(BaseStateGroup):
     PRICE = 'price'
     AGENT = 'agent'
     VERIFY = 'verify'
+
+
+class OrderInfo(BaseStateGroup):
+    UID = 'uid'
+
+
+async def make_export_file(orders: list[Order]) -> BytesIO:
+    '''Makes XLSX file and return it.
+
+    Args:
+        orders (list[Order]): Array of Orders.
+
+    Returns:
+        BytesIO: XLSX file.
+    '''
+    period = (
+        orders[0].start_date,
+        orders[::-1][0].start_date
+    )
+    wb = Workbook()
+    ws = wb.active
+    ws.title = f'с {str(period[0])} по {str(period[1])}'
+    ws['A1'] = '№ Заказа'
+    ws['A1'].font = Font(bold=True)
+    ws['B1'] = 'Цель'
+    ws['B1'].font = Font(bold=True)
+    ws['C1'] = 'Цена'
+    ws['C1'].font = Font(bold=True)
+    ws['D1'] = 'Агент'
+    ws['D1'].font = Font(bold=True)
+    ws['E1'] = 'Дата начала'
+    ws['E1'].font = Font(bold=True)
+    ws['F1'] = 'Дата оплаты'
+    ws['F1'].font = Font(bold=True)
+    rid = 2
+    for order in orders:
+        ws[f'A{rid}'] = order.uid
+        ws[f'B{rid}'] = order.name
+        ws[f'C{rid}'] = order.price
+        ws[f'D{rid}'] = order.agent.name
+        ws[f'E{rid}'] = order.start_date
+        if order.end_date:
+            ws[f'F{rid}'] = order.end_date
+        else:
+            ws[f'F{rid}'] = 'Не оплачен'
+        rid += 1
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return buf
 
 
 def is_order_cmd(payload: str) -> bool:
@@ -222,7 +277,7 @@ async def orders_history(msg: Message):
     else:
         cnt = 'Заказы отсутствуют.'
     await msg.answer(
-        cnt, keyboard=keys.back('orders')
+        cnt, keyboard=keys.orders_history()
     )
 
 
@@ -249,4 +304,64 @@ async def end_order(msg: Message):
     await msg.answer(
         f'Заказ #{order_uid} - оплачен!',
         keyboard=keys.back('orders')
+    )
+
+
+@bp.on.private_message(payload={'command': 'order_info'})
+async def order_info_start(msg: Message):
+    user = await msg.get_user()
+    log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
+    await bp.state_dispenser.set(msg.peer_id, OrderInfo.UID)
+    await msg.answer(
+        'Отправьте номер заказа',
+        keyboard=keys.back('orders')
+    )
+
+
+@bp.on.private_message(StateRule(OrderInfo.UID))
+async def end_order_info(msg: Message):
+    user = await msg.get_user()
+    log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
+    if not msg.text.isdigit():
+        await msg.answer(
+            'ОШИБКА: Номер заказа должен быть цифровым!\nПовторите ввод.',
+            keyboard=keys.back('orders')
+        )
+        return
+    await bp.state_dispenser.delete(msg.peer_id)
+    async with DB_LOCK:
+        order = await Database.get_order_by_uid(int(msg.text))
+    if order:
+        await msg.answer(
+            order.get_full_str(), keyboard=keys.back('orders')
+        )
+    else:
+        await msg.answer(
+            'ОШИБКА: Заказ не найден!',
+            keyboard=keys.back('orders')
+        )
+
+
+@bp.on.message(payload={'command': 'orders_history_export'})
+async def orders_history_export(msg: Message):
+    user = await msg.get_user()
+    log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
+    wait_msg = await msg.answer('Файл готовится...')
+    async with DB_LOCK:
+        orders = await Database.get_orders()
+    file = await make_export_file(orders)
+    period = (
+        orders[0].start_date,
+        orders[::-1][0].start_date
+    )
+    file_name = f'Отчёт с {str(period[0])} по {str(period[1])}.xlsx'
+    uploader = DocMessagesUploader(bp.api)
+    doc = await uploader.upload(
+        file_name, file, peer_id=msg.peer_id
+    )
+    await bp.api.messages.delete(
+        wait_msg.message_id, peer_id=wait_msg.peer_id
+    )
+    await msg.answer(
+        'Файл готов!', attachment=doc, keyboard=keys.start()
     )

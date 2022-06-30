@@ -211,6 +211,28 @@ class Keyboards:
         return key.get_json()
 
     @staticmethod
+    def orders_history() -> str:
+        '''Returns orders history keyboard.
+
+        Returns:
+            str: JSON string.
+        '''
+        key = Keyboard(True)
+        key.add(Text(
+            'Информация о заказе',
+            {'command': 'order_info'}
+        ), KeyboardButtonColor.PRIMARY)
+        key.add(Text(
+            'Экспорт',
+            {'command': 'orders_history_export'}
+        ), KeyboardButtonColor.POSITIVE)
+        key.row().add(Text(
+            'Назад',
+            {'command': 'orders'}
+        ), KeyboardButtonColor.SECONDARY)
+        return key.get_json()
+
+    @staticmethod
     def add_order_agents(agents: list[Agent]) -> str:
         '''Returns keyboard with agents.
 
