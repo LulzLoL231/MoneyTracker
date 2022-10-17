@@ -25,7 +25,7 @@ class Config(BaseSettings):
         env_file = env_file
 
 
-cfg = Config(DEBUG=False, TOKEN='')
+cfg = Config()  # type: ignore
 logging.basicConfig(
     format='[%(levelname)s] %(name)s (%(lineno)d) '
            '>> %(module)s.%(funcName)s: %(message)s',
