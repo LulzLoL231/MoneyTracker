@@ -6,6 +6,7 @@
 import json
 import logging
 from io import BytesIO
+from dataclasses import dataclass
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
@@ -33,6 +34,14 @@ class AddOrder(BaseStateGroup):
 
 class OrderInfo(BaseStateGroup):
     UID = 'uid'
+
+
+@dataclass
+class OrderShortcut:
+    command: str
+    name: str
+    price: str
+    agent: str
 
 
 async def make_export_file(orders: list[Order]) -> BytesIO:
@@ -97,6 +106,65 @@ def is_end_order_cmd(payload: str | None) -> bool:
     if payload:
         return json.loads(payload).get('command', '').startswith('end_order#')
     return False
+
+
+@bp.on.private_message(FuncRule(
+    lambda m: m.text.lower() == 'create_order'
+))
+async def create_order_shortcut(msg: Message):
+    user = await msg.get_user()
+    log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
+    try:
+        order = OrderShortcut(*msg.text.split(';'))
+    except TypeError:
+        log.warning(
+            f'User #{msg.peer_id} use incorrect syntax for '
+            'order creation shortcut!'
+        )
+        await bp.state_dispenser.delete(msg.peer_id)
+        await msg.answer(
+            'ОШИБКА: Неверный синтаксис!',
+            keyboard=keys.back('orders')
+        )
+        return
+    async with DB_LOCK:
+        agents = await Database.get_agents()
+    agent_l = list(filter(
+        lambda a: a.name.lower() == order.agent, agents
+    ))
+    if not agent_l:
+        log.warning(
+            f'User #{msg.peer_id} selected unexistsing '
+            f'Agent name: {order.agent}'
+        )
+        await bp.state_dispenser.delete(msg.peer_id)
+        await msg.answer(
+            'ОШИБКА: Выбранный Агент не найден!',
+            keyboard=keys.back('orders')
+        )
+        return
+    else:
+        agent = agent_l[0]
+    if not order.price.isdigit():
+        log.warning(
+            f'User #{msg.peer_id} use not digit in order price!'
+        )
+        await bp.state_dispenser.delete(msg.peer_id)
+        await msg.answer(
+            'ОШИБКА: Цена заказа не число!',
+            keyboard=keys.back('orders')
+        )
+        return
+    await bp.state_dispenser.set(
+        msg.peer_id, AddOrder.VERIFY, agent_uid=agent.uid,
+        name=order.name, price=int(order.price)
+    )
+    cnt = 'Подтвердите заказ:\n\n'
+    cnt += f'Цель: {order.name}\n'
+    cnt += f'Цена: {order.price}\n'
+    cnt += f'Агент: {agent.name}\n\n'
+    cnt += 'Создать заказ?'
+    await msg.answer(cnt, keyboard=keys.verify())
 
 
 @bp.on.private_message(FuncRule(
