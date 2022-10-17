@@ -109,7 +109,7 @@ def is_end_order_cmd(payload: str | None) -> bool:
 
 
 @bp.on.private_message(FuncRule(
-    lambda m: m.text.lower() == 'create_order'
+    lambda m: m.text.lower().split(';')[0] == 'create_order'
 ))
 async def create_order_shortcut(msg: Message):
     user = await msg.get_user()
@@ -130,7 +130,7 @@ async def create_order_shortcut(msg: Message):
     async with DB_LOCK:
         agents = await Database.get_agents()
     agent_l = list(filter(
-        lambda a: a.name.lower() == order.agent, agents
+        lambda a: a.name.lower() == order.agent.lower(), agents
     ))
     if not agent_l:
         log.warning(
