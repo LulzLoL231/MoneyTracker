@@ -23,14 +23,16 @@ class AddAgent(BaseStateGroup):
     NAME = 'name'
 
 
-def is_del_agent_cmd(payload: str) -> bool:
+def is_del_agent_cmd(payload: str | None) -> bool:
     if payload:
         pd = json.loads(payload)
         return pd.get('command', '').startswith('del_agent#')
     return False
 
 
-@bp.on.private_message(FuncRule(lambda m: m.text.lower() in ['/agents', 'агенты']))
+@bp.on.private_message(FuncRule(
+    lambda m: m.text.lower() in ['/agents', 'агенты']
+))
 @bp.on.private_message(payload={'command': 'agents'})
 async def agents(msg: Message):
     user = await msg.get_user()
@@ -93,7 +95,8 @@ async def del_agent_start(msg: Message):
 async def del_agent_end(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    agent_uid = int((msg.get_payload_json())['command'].split('#')[1])
+    msg_payload_json: dict = msg.get_payload_json()  # type: ignore
+    agent_uid = int(msg_payload_json['command'].split('#')[1])
     async with DB_LOCK:
         await Database.del_agent(agent_uid)
     await msg.answer(

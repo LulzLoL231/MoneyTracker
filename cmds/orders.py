@@ -69,9 +69,9 @@ async def make_export_file(orders: list[Order]) -> BytesIO:
         ws[f'B{rid}'] = order.name
         ws[f'C{rid}'] = order.price
         ws[f'D{rid}'] = order.agent.name
-        ws[f'E{rid}'] = order.start_date
+        ws[f'E{rid}'] = str(order.start_date)
         if order.end_date:
-            ws[f'F{rid}'] = order.end_date
+            ws[f'F{rid}'] = str(order.end_date)
         else:
             ws[f'F{rid}'] = 'Не оплачен'
         rid += 1
@@ -81,25 +81,27 @@ async def make_export_file(orders: list[Order]) -> BytesIO:
     return buf
 
 
-def is_order_cmd(payload: str) -> bool:
+def is_order_cmd(payload: str | None) -> bool:
     if payload:
         return json.loads(payload).get('command', '').startswith('order#')
     return False
 
 
-def is_del_order_cmd(payload: str) -> bool:
+def is_del_order_cmd(payload: str | None) -> bool:
     if payload:
         return json.loads(payload).get('command', '').startswith('del_order#')
     return False
 
 
-def is_end_order_cmd(payload: str) -> bool:
+def is_end_order_cmd(payload: str | None) -> bool:
     if payload:
         return json.loads(payload).get('command', '').startswith('end_order#')
     return False
 
 
-@bp.on.private_message(FuncRule(lambda m: m.text.lower() in ['/orders', 'заказы']))
+@bp.on.private_message(FuncRule(
+    lambda m: m.text.lower() in ['/orders', 'заказы']
+))
 @bp.on.private_message(payload={'command': 'orders'})
 async def orders(msg: Message):
     user = await msg.get_user()
@@ -162,7 +164,8 @@ async def add_order_price(msg: Message):
         return
     elif not msg.text.isdigit():
         await msg.answer(
-            'ОШИБКА: В качестве цены должно выступать цифровое значение!\nПовторите ввод.',
+            'ОШИБКА: В качестве цены должно выступать цифровое значение!'
+            '\nПовторите ввод.',
             keyboard=keys.back('orders')
         )
         return
@@ -171,7 +174,7 @@ async def add_order_price(msg: Message):
     if agents:
         await bp.state_dispenser.set(
             msg.peer_id, AddOrder.AGENT, price=int(msg.text),
-            name=msg.state_peer.payload.get('name')
+            name=msg.state_peer.payload.get('name')  # type: ignore
         )
         cnt = 'Выберите агента'
         key = keys.add_order_agents(agents)
@@ -187,9 +190,9 @@ async def verify_add_order(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     cnt = 'Подтвердите заказ:\n\n'
-    m_payload = json.loads(msg.payload)
-    agent_uid = m_payload.get('agent_uid', '')
-    s_payload = msg.state_peer.payload
+    m_payload: dict = msg.get_payload_json()  # type: ignore
+    agent_uid = int(m_payload.get('agent_uid', ''))
+    s_payload = msg.state_peer.payload  # type: ignore
     async with DB_LOCK:
         agent = await Database.get_agent_by_uid(agent_uid)
     if not agent:
@@ -218,11 +221,11 @@ async def add_order_end(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     if msg.text in keys.YES_TEXTS:
-        payload = msg.state_peer.payload
+        payload = msg.state_peer.payload  # type: ignore
         async with DB_LOCK:
             order = await Database.add_order(
-                payload.get('name'), payload.get('price'),
-                payload.get('agent_uid')
+                payload.get('name', ''), int(payload.get('price', -1)),
+                int(payload.get('price', -1))
             )
         cnt = f'Заказ #{order.uid} - создан!'
         key = keys.order_btn(order.uid)
@@ -237,7 +240,8 @@ async def add_order_end(msg: Message):
 async def order(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    order_uid = int(msg.get_payload_json().get('command', '#').split('#')[1])
+    msg_payload_json: dict = msg.get_payload_json()  # type: ignore
+    order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
     async with DB_LOCK:
         order = await Database.get_order_by_uid(order_uid)
     if order:
@@ -285,7 +289,8 @@ async def orders_history(msg: Message):
 async def del_order(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    order_uid = int(msg.get_payload_json().get('command', '#').split('#')[1])
+    msg_payload_json: dict = msg.get_payload_json()  # type: ignore
+    order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
     async with DB_LOCK:
         await Database.del_order(order_uid)
     await msg.answer(
@@ -298,7 +303,8 @@ async def del_order(msg: Message):
 async def end_order(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    order_uid = int(msg.get_payload_json().get('command', '#').split('#')[1])
+    msg_payload_json: dict = msg.get_payload_json()  # type: ignore
+    order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
     async with DB_LOCK:
         await Database.end_order(order_uid)
     await msg.answer(
@@ -356,11 +362,12 @@ async def orders_history_export(msg: Message):
     )
     file_name = f'Отчёт с {str(period[0])} по {str(period[1])}.xlsx'
     uploader = DocMessagesUploader(bp.api)
-    doc = await uploader.upload(
+    doc: str = await uploader.upload(
         file_name, file, peer_id=msg.peer_id
-    )
+    )  # type: ignore
     await bp.api.messages.delete(
-        wait_msg.message_id, peer_id=wait_msg.peer_id
+        wait_msg.message_id, peer_id=wait_msg.peer_id,  # type: ignore
+        delete_for_all=True
     )
     await msg.answer(
         'Файл готов!', attachment=doc, keyboard=keys.start()

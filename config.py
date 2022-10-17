@@ -9,7 +9,7 @@ from pydantic import BaseSettings, Field
 
 
 class Config(BaseSettings):
-    VERSION: str = '0.4'
+    VERSION: str = '0.4.1'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     TOKEN: str = Field(..., env='BOT_TOKEN')
 
@@ -17,8 +17,9 @@ class Config(BaseSettings):
         env_file = '.env'
 
 
-cfg = Config()
+cfg = Config(DEBUG=False, TOKEN='')
 logging.basicConfig(
-    format='[%(levelname)s] %(name)s (%(lineno)d) >> %(module)s.%(funcName)s: %(message)s',
+    format='[%(levelname)s] %(name)s (%(lineno)d) '
+           '>> %(module)s.%(funcName)s: %(message)s',
     level=logging.DEBUG if cfg.DEBUG else logging.INFO
 )

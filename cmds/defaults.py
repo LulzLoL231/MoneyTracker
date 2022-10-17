@@ -41,5 +41,6 @@ async def start_bot(msg: Message):
 async def about_bot(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    cnt = f'MoneyTracker\nОтслеживаем оплату заказов.\n\nСоздатель: @0x403\nВерсия: {cfg.VERSION}'
+    cnt = f'MoneyTracker\nОтслеживаем оплату заказов.\n\n' \
+          f'Создатель: @0x403\nВерсия: {cfg.VERSION}'
     await msg.answer(cnt, keyboard=keys.start())

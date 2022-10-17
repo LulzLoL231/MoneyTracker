@@ -20,7 +20,7 @@ class Order(BaseModel):
     agent_uid: int
     agent: Agent
     start_date: date
-    end_date: date | None
+    end_date: date | None = None
 
     def get_full_str(self) -> str:
         tmp_cnt = '''Заказ #{}
