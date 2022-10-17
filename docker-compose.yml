@@ -1,0 +1,9 @@
+version: '3.4'
+
+services:
+  moneytracker:
+    image: moneytracker
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    command: "python3 main.py"
