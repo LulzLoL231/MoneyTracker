@@ -4,8 +4,16 @@
 #  Created by LulzLoL231 at 27/06/22
 #
 import logging
+import platform
 
 from pydantic import BaseSettings, Field
+
+
+# Fixing .env file path for Docker.
+if platform.system() == 'Linux':
+    env_file = '/.env'
+else:
+    env_file = '.env'
 
 
 class Config(BaseSettings):
@@ -14,7 +22,7 @@ class Config(BaseSettings):
     TOKEN: str = Field(..., env='BOT_TOKEN')
 
     class Config:
-        env_file = '.env'
+        env_file = env_file
 
 
 cfg = Config(DEBUG=False, TOKEN='')
