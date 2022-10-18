@@ -1,11 +1,11 @@
 version: '3.4'
 
 services:
-  moneytracker-tg:
-    image: moneytracker-tg
+  moneytracker-vk:
+    image: moneytracker-vk
     build:
       context: .
-      dockerfile: ./tg/Dockerfile
-    command: "python3 -c 'while True: pass'"
+      dockerfile: ./vk/Dockerfile
+    command: "python3 /vk/main.py"
     volumes:
-      - ./tg/database:/tg/database:rw
+      - ./vk/database:/vk/database:rw
