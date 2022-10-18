@@ -14,6 +14,7 @@ from .types import Agent, Order
 
 
 DB_LOCK = Lock()
+DB_FILE = 'database/bot.db'
 
 
 class Database:
@@ -38,7 +39,7 @@ class Database:
             int: Last row id.
         '''
         cls.log.debug(f'Called with args: ({sql}, {params})')
-        async with aiosqlite.connect('bot.db') as db:
+        async with aiosqlite.connect(DB_FILE) as db:
             cur = await db.execute(sql, params)
             await db.commit()
             return cur.lastrowid
@@ -57,7 +58,7 @@ class Database:
             dict | None: Row data if exists.
         '''
         cls.log.debug(f'Called with args: ({sql}, {params})')
-        async with aiosqlite.connect('bot.db') as db:
+        async with aiosqlite.connect(DB_FILE) as db:
             db.row_factory = aiosqlite.Row
             cur = await db.execute(sql, params)
             fetch = await cur.fetchone()
@@ -79,7 +80,7 @@ class Database:
             list[dict] | None: Array of rows data if exists.
         '''
         cls.log.debug(f'Called with args: ({sql}, {params})')
-        async with aiosqlite.connect('bot.db') as db:
+        async with aiosqlite.connect(DB_FILE) as db:
             db.row_factory = aiosqlite.Row
             cur = await db.execute(sql, params)
             return [dict(i) for i in (await cur.fetchall())]

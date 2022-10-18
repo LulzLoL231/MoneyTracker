@@ -1,11 +1,11 @@
 version: '3.4'
 
 services:
-  moneytracker:
-    image: moneytracker
+  moneytracker-tg:
+    image: moneytracker-tg
     build:
       context: .
-      dockerfile: ./Dockerfile
-    command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 main.py "]
+      dockerfile: ./tg/Dockerfile
+    command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 ./tg/main.py "]
     ports:
       - 5678:5678
