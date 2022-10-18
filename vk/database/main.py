@@ -4,6 +4,7 @@
 #  Created by LulzLoL231 27/06/22
 #
 import logging
+import platform
 from asyncio import Lock
 from datetime import date
 from typing import Literal
@@ -14,7 +15,11 @@ from .types import Agent, Order
 
 
 DB_LOCK = Lock()
-DB_FILE = 'database/bot.db'
+# Fixing .env file path for Docker.
+if platform.system() == 'Linux':
+    DB_FILE = '/vk/database/bot.db'
+else:
+    DB_FILE = './vk/database/bot.db'
 
 
 class Database:
