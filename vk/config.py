@@ -11,9 +11,9 @@ from pydantic import BaseSettings, Field
 
 # Fixing .env file path for Docker.
 if platform.system() == 'Linux':
-    env_file = '/tg/tg/.env'
+    env_file = '/vk/vk/.env'
 else:
-    env_file = './tg/.env'
+    env_file = './vk/.env'
 
 
 class Config(BaseSettings):
