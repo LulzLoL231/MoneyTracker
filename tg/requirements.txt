@@ -1,0 +1,6 @@
+aiogram
+pydantic[dotenv]
+openpyxl
+databases[asyncpg]
+sqlalchemy[mypy]
+psycopg2
