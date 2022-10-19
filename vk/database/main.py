@@ -69,7 +69,7 @@ class Database:
         '''
         self.log.debug(f'Called with args: ({uid})')
         stmt = models.agent.select().where(models.agent.c.uid == uid)
-        res = await self.db.fetch_one(stmt, {'uid': uid})
+        res = await self.db.fetch_one(stmt)
         if res:
             return Agent.from_orm(res)
         return None
