@@ -165,7 +165,7 @@ class Database:
         '''
         self.log.debug(f'Called with args: ({uid})')
         stmt = models.order.select().where(models.order.c.uid == uid)
-        fetch = await self.db.fetch_one(stmt, {'uid': uid})
+        fetch = await self.db.fetch_one(stmt)
         if fetch:
             agent = await self.get_agent_by_uid(fetch.agent_uid)
             if agent:
