@@ -12,6 +12,9 @@ class Agent(BaseModel):
     uid: int
     name: str
 
+    class Config:
+        orm_mode = True
+
 
 class Order(BaseModel):
     uid: int
@@ -21,6 +24,9 @@ class Order(BaseModel):
     agent: Agent
     start_date: date
     end_date: date | None = None
+
+    class Config:
+        orm_mode = True
 
     def get_full_str(self) -> str:
         tmp_cnt = '''Заказ #{}

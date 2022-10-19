@@ -15,10 +15,9 @@ from vkbottle.tools import DocMessagesUploader
 from vkbottle import BaseStateGroup, BotBlueprint
 from vkbottle.dispatch.rules.base import FuncRule, StateRule
 
-from config import cfg
 from database.types import Order
 from keyboards import Keyboards as keys
-from database.main import Database, DB_LOCK
+from database.main import db as Database
 
 
 log = logging.getLogger('MoneyTracker')
@@ -127,8 +126,7 @@ async def create_order_shortcut(msg: Message):
             keyboard=keys.back('orders')
         )
         return
-    async with DB_LOCK:
-        agents = await Database.get_agents()
+    agents = await Database.get_agents()
     agent_l = list(filter(
         lambda a: a.name.lower() == order.agent.lower(), agents
     ))
@@ -174,8 +172,7 @@ async def create_order_shortcut(msg: Message):
 async def orders(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    async with DB_LOCK:
-        orders = await Database.get_orders()
+    orders = await Database.get_orders()
     inprog_orders = list(filter(
         (lambda o: not o.end_date),
         orders
@@ -237,8 +234,7 @@ async def add_order_price(msg: Message):
             keyboard=keys.back('orders')
         )
         return
-    async with DB_LOCK:
-        agents = await Database.get_agents()
+    agents = await Database.get_agents()
     if agents:
         await bp.state_dispenser.set(
             msg.peer_id, AddOrder.AGENT, price=int(msg.text),
@@ -261,8 +257,7 @@ async def verify_add_order(msg: Message):
     m_payload: dict = msg.get_payload_json()  # type: ignore
     agent_uid = int(m_payload.get('agent_uid', ''))
     s_payload = msg.state_peer.payload  # type: ignore
-    async with DB_LOCK:
-        agent = await Database.get_agent_by_uid(agent_uid)
+    agent = await Database.get_agent_by_uid(agent_uid)
     if not agent:
         log.warning(
             f'User #{msg.peer_id} selected unexistsing Agent UID: {agent_uid}'
@@ -290,11 +285,10 @@ async def add_order_end(msg: Message):
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     if msg.text in keys.YES_TEXTS:
         payload = msg.state_peer.payload  # type: ignore
-        async with DB_LOCK:
-            order = await Database.add_order(
-                payload.get('name', ''), int(payload.get('price', -1)),
-                int(payload.get('price', -1))
-            )
+        order = await Database.add_order(
+            payload.get('name', ''), int(payload.get('price', -1)),
+            int(payload.get('price', -1))
+        )
         cnt = f'Заказ #{order.uid} - создан!'
         key = keys.order_btn(order.uid)
     else:
@@ -310,8 +304,7 @@ async def order(msg: Message):
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
-    async with DB_LOCK:
-        order = await Database.get_order_by_uid(order_uid)
+    order = await Database.get_order_by_uid(order_uid)
     if order:
         await msg.answer(
             order.get_full_str(),
@@ -328,8 +321,7 @@ async def order(msg: Message):
 async def orders_history(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    async with DB_LOCK:
-        orders = await Database.get_orders()
+    orders = await Database.get_orders()
     if orders:
         ended_orders = filter(
             (lambda o: o.end_date),
@@ -359,8 +351,7 @@ async def del_order(msg: Message):
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
-    async with DB_LOCK:
-        await Database.del_order(order_uid)
+    await Database.del_order(order_uid)
     await msg.answer(
         f'Заказ #{order_uid} - удалён!',
         keyboard=keys.back('orders')
@@ -373,8 +364,7 @@ async def end_order(msg: Message):
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
-    async with DB_LOCK:
-        await Database.end_order(order_uid)
+    await Database.end_order(order_uid)
     await msg.answer(
         f'Заказ #{order_uid} - оплачен!',
         keyboard=keys.back('orders')
@@ -403,8 +393,7 @@ async def end_order_info(msg: Message):
         )
         return
     await bp.state_dispenser.delete(msg.peer_id)
-    async with DB_LOCK:
-        order = await Database.get_order_by_uid(int(msg.text))
+    order = await Database.get_order_by_uid(int(msg.text))
     if order:
         await msg.answer(
             order.get_full_str(), keyboard=keys.back('orders')
@@ -421,8 +410,7 @@ async def orders_history_export(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     wait_msg = await msg.answer('Файл готовится...')
-    async with DB_LOCK:
-        orders = await Database.get_orders()
+    orders = await Database.get_orders()
     file = await make_export_file(orders)
     period = (
         orders[0].start_date,

@@ -10,7 +10,7 @@ from vkbottle.dispatch.rules.base import FuncRule
 
 from config import cfg
 from keyboards import Keyboards as keys
-from database.main import Database, DB_LOCK
+from database.main import db as Database
 
 
 log = logging.getLogger('MoneyTracker')
@@ -22,8 +22,7 @@ bp = BotBlueprint('defaults')
 async def start_bot(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    async with DB_LOCK:
-        orders = await Database.get_orders()
+    orders = await Database.get_orders()
     cnt = f'Привет {user.first_name}!\n\n'
     if orders:
         cnt += 'Текущие заказы:\n'

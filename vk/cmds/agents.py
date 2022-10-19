@@ -10,9 +10,8 @@ from vkbottle.bot import Message
 from vkbottle import BaseStateGroup, BotBlueprint
 from vkbottle.dispatch.rules.base import FuncRule, StateRule
 
-from config import cfg
+from database.main import db as Database
 from keyboards import Keyboards as keys
-from database.main import Database, DB_LOCK
 
 
 log = logging.getLogger('MoneyTracker')
@@ -37,8 +36,7 @@ def is_del_agent_cmd(payload: str | None) -> bool:
 async def agents(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    async with DB_LOCK:
-        agents = await Database.get_agents()
+    agents = await Database.get_agents()
     if agents:
         cnt = 'Список агентов:\n\n'
         cnt += '\n'.join([f'#{a.uid} - {a.name}' for a in agents])
@@ -64,8 +62,7 @@ async def add_agent_end(msg: Message):
         log.info(f'User #{msg.peer_id} canceled adding agent.')
         await agents(msg)
         return
-    async with DB_LOCK:
-        agent = await Database.add_agent(msg.text)
+    agent = await Database.add_agent(msg.text)
     await bp.state_dispenser.delete(msg.peer_id)
     await msg.answer(
         f'Агент #{agent.uid} - Добавлен!',
@@ -77,8 +74,7 @@ async def add_agent_end(msg: Message):
 async def del_agent_start(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    async with DB_LOCK:
-        agents = await Database.get_agents()
+    agents = await Database.get_agents()
     if not agents:
         await msg.answer(
             'Агенты отсутствуют. Нечего удалять.',
@@ -97,8 +93,7 @@ async def del_agent_end(msg: Message):
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     agent_uid = int(msg_payload_json['command'].split('#')[1])
-    async with DB_LOCK:
-        await Database.del_agent(agent_uid)
+    await Database.del_agent(agent_uid)
     await msg.answer(
         f'Агент #{agent_uid} - удален!',
         keyboard=keys.back('agents')

@@ -1,4 +1,6 @@
 vkbottle
 pydantic[dotenv]
-aiosqlite
 openpyxl
+databases[asyncpg]
+sqlalchemy[mypy]
+psycopg2

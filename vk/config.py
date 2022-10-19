@@ -6,20 +6,21 @@
 import logging
 import platform
 
-from pydantic import BaseSettings, Field
+from pydantic import BaseSettings, Field, PostgresDsn
 
 
 # Fixing .env file path for Docker.
 if platform.system() == 'Linux':
     env_file = '/vk/.env'
 else:
-    env_file = './vk/.env'
+    env_file = '.env'
 
 
 class Config(BaseSettings):
-    VERSION: str = '0.5.2'
+    VERSION: str = '1.0'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
-    TOKEN: str = Field(..., env='BOT_TOKEN')
+    token: str = Field(..., env='BOT_TOKEN')
+    postgres_dsn: PostgresDsn = Field(..., env='BOT_POSTGRESDSN')
 
     class Config:
         env_file = env_file

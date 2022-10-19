@@ -4,102 +4,47 @@
 #  Created by LulzLoL231 27/06/22
 #
 import logging
-import platform
-from asyncio import Lock
 from datetime import date
 from typing import Literal
 
-import aiosqlite
+import sqlalchemy as sa
+from databases import DatabaseURL, Database as DB
 
+from config import cfg
+from . import models
 from .types import Agent, Order
 
 
-DB_LOCK = Lock()
-# Fixing .env file path for Docker.
-if platform.system() == 'Linux':
-    DB_FILE = '/vk/database/bot.db'
-else:
-    DB_FILE = './vk/database/bot.db'
+database = DB(str(cfg.postgres_dsn))
 
 
 class Database:
-    TABLES = [
-        'CREATE TABLE IF NOT EXISTS "agents" '
-        '("uid" INTEGER PRIMARY KEY, "name" TEXT)',
-        'CREATE TABLE IF NOT EXISTS "orders" '
-        '("uid" INTEGER PRIMARY KEY, "name" TEXT, "price" INTEGER, '
-        '"agent_uid" TEXT, "start_date" TEXT, "end_date" TEXT)'
-    ]
-    log = logging.getLogger('MoneyTracker Database')
+    log = logging.getLogger('MoneyTrackerDB')
+
+    def __init__(self) -> None:
+        self.db = database
 
     @classmethod
-    async def _dbcall_commit(cls, sql: str, params: tuple = tuple()) -> int:
-        '''Makes a DB call.
-
-        Args:
-            sql (str): SQL statement.
-            params (tuple, optional): SQL params. Defaults to tuple().
-
-        Returns:
-            int: Last row id.
-        '''
-        cls.log.debug(f'Called with args: ({sql}, {params})')
-        async with aiosqlite.connect(DB_FILE) as db:
-            cur = await db.execute(sql, params)
-            await db.commit()
-            return cur.lastrowid
-
-    @classmethod
-    async def _dbcall_fetchone(cls,
-                               sql: str,
-                               params: tuple = tuple()) -> dict | None:
-        '''Fetching 1 row from DB.
-
-        Args:
-            sql (str): SQL statement.
-            params (tuple, optional): SQL params. Defaults to tuple().
-
-        Returns:
-            dict | None: Row data if exists.
-        '''
-        cls.log.debug(f'Called with args: ({sql}, {params})')
-        async with aiosqlite.connect(DB_FILE) as db:
-            db.row_factory = aiosqlite.Row
-            cur = await db.execute(sql, params)
-            fetch = await cur.fetchone()
-            if fetch:
-                return dict(fetch)
-            return None
-
-    @classmethod
-    async def _dbcall_fetchall(cls,
-                               sql: str,
-                               params: tuple = tuple()) -> list[dict] | None:
-        '''Fetching all rows from DB.
-
-        Args:
-            sql (str): SQL statement.
-            params (tuple, optional): SQL params. Defaults to tuple().
-
-        Returns:
-            list[dict] | None: Array of rows data if exists.
-        '''
-        cls.log.debug(f'Called with args: ({sql}, {params})')
-        async with aiosqlite.connect(DB_FILE) as db:
-            db.row_factory = aiosqlite.Row
-            cur = await db.execute(sql, params)
-            return [dict(i) for i in (await cur.fetchall())]
-
-    @classmethod
-    async def _create_tables(cls):
-        '''Creates tables.
+    def _create_tables(cls):
+        '''Creates tables from metadata.
         '''
         cls.log.debug('Creating tables...')
-        for sql in cls.TABLES:
-            await cls._dbcall_commit(sql)
+        dsn = DatabaseURL(str(cfg.postgres_dsn)).replace(driver='psycopg2')
+        engine = sa.create_engine(str(dsn), echo=cfg.DEBUG)
+        models.metadata.create_all(engine)
 
-    @classmethod
-    async def add_agent(cls, name: str) -> Agent:
+    async def connect(self):
+        '''Connect to PostgreSQL.
+        '''
+        await self.db.connect()
+
+    async def disconnect(self):
+        '''Disconnect from PostgreSQL.
+        '''
+        await self.db.disconnect()
+
+    @database.transaction()
+    async def add_agent(self, name: str) -> Agent:
         '''Add a new agent to DB.
 
         Args:
@@ -108,14 +53,12 @@ class Database:
         Returns:
             Agent: A created Agent.
         '''
-        cls.log.debug(f'Called with args: ({name})')
-        sql = 'INSERT INTO agents (name) VALUES (?)'
-        params = (name,)
-        uid = await cls._dbcall_commit(sql, params)
+        self.log.debug(f'Called with args: ({name})')
+        stmt1 = models.agent.insert().values(name=name)
+        uid = await self.db.execute(stmt1, {'name': name})
         return Agent(uid=uid, name=name)
 
-    @classmethod
-    async def get_agent_by_uid(cls, uid: int) -> Agent | None:
+    async def get_agent_by_uid(self, uid: int) -> Agent | None:
         '''Returns agent by UID.
 
         Args:
@@ -124,46 +67,44 @@ class Database:
         Returns:
             Agent | None: Agent if exists.
         '''
-        cls.log.debug(f'Called with args: ({uid})')
-        sql = 'SELECT * FROM agents WHERE uid=?'
-        params = (uid,)
-        agent = await cls._dbcall_fetchone(sql, params)
-        if agent:
-            return Agent(**agent)
+        self.log.debug(f'Called with args: ({uid})')
+        stmt = models.agent.select().where(models.agent.c.uid == uid)
+        res = await self.db.fetch_one(stmt, {'uid': uid})
+        if res:
+            return Agent.from_orm(res)
         return None
 
-    @classmethod
-    async def get_orders(cls) -> list[Order]:
+    async def get_orders(self) -> list[Order]:
         '''Returns all orders.
 
         Returns:
             list[Order]: Array of orders.
         '''
-        cls.log.debug('Called!')
+        self.log.debug('Called!')
         orders = []
-        sql = 'SELECT * FROM orders'
-        fetch = await cls._dbcall_fetchall(sql)
+        stmt = models.order.select()
+        fetch = await self.db.fetch_all(stmt)
         if fetch:
             for ord in fetch:
-                agent = await cls.get_agent_by_uid(ord['agent_uid'])
+                agent = await self.get_agent_by_uid(ord.agent_uid)
                 if agent:
                     orders.append(Order(
-                        uid=ord['uid'],
-                        name=ord['name'],
-                        price=ord['price'],
-                        agent_uid=ord['agent_uid'],
+                        uid=ord.uid,
+                        name=ord.name,
+                        price=ord.price,
+                        agent_uid=ord.agent_uid,
                         agent=agent,
-                        start_date=ord['start_date'],
-                        end_date=ord.get('end_date', None)
+                        start_date=ord.start_date,
+                        end_date=ord.end_date
                     ))
                 else:
-                    cls.log.error(
-                        f'Order #{ord["uid"]} have nonexistent '
-                        f'Agent UID #{ord["agent_uid"]}')
+                    self.log.error(
+                        f'Order #{ord.uid} have nonexistent '
+                        f'Agent UID #{ord.agent_uid}')
         return orders
 
-    @classmethod
-    async def del_agent(cls, uid: int) -> Literal[True]:
+    @database.transaction()
+    async def del_agent(self, uid: int) -> Literal[True]:
         '''Deletes Agent from DB.
 
         Args:
@@ -172,15 +113,13 @@ class Database:
         Returns:
             Literal[True]: Always True.
         '''
-        cls.log.debug(f'Called with args: ({uid})')
-        await cls._dbcall_commit(
-            'DELETE FROM agents WHERE uid=?',
-            (uid,)
-        )
+        self.log.debug(f'Called with args: ({uid})')
+        stmt = models.agent.delete().where(models.agent.c.uid == uid)
+        await self.db.execute(stmt, {'uid': uid})
         return True
 
-    @classmethod
-    async def add_order(cls, name: str, price: int, agent_uid: int) -> Order:
+    @database.transaction()
+    async def add_order(self, name: str, price: int, agent_uid: int) -> Order:
         '''Add a new Order to DB.
 
         Args:
@@ -191,31 +130,31 @@ class Database:
         Returns:
             Order: A created Order.
         '''
-        cls.log.debug(f'Called with args: ({name}, {price}, {agent_uid})')
-        sql = 'INSERT INTO orders (name, price, agent_uid, start_date) '\
-              'VALUES (?,?,?,?)'
-        params = (name, price, agent_uid, str(date.today()))
-        uid = await cls._dbcall_commit(sql, params)
-        agent = await cls.get_agent_by_uid(agent_uid)
+        self.log.debug(f'Called with args: ({name}, {price}, {agent_uid})')
+        values = {
+            'name': name, 'price': price, 'agent_uid': agent_uid,
+            'start_date': str(date.today())
+        }
+        stmt = models.order.insert().values(**values)
+        uid = await self.db.execute(stmt, values)
+        agent = await self.get_agent_by_uid(agent_uid)
         return Order(
             uid=uid, name=name, price=price, agent_uid=agent_uid,
-            agent=agent, start_date=params[3]  # type: ignore
+            agent=agent, start_date=values['start_date']
         )
 
-    @classmethod
-    async def get_agents(cls) -> list[Agent]:
+    async def get_agents(self) -> list[Agent]:
         '''Returns all agents.
 
         Returns:
             list[Agents]: Array of agents.
         '''
-        cls.log.debug('Called!')
-        sql = 'SELECT * FROM agents'
-        fetch = await cls._dbcall_fetchall(sql)
-        return [Agent(**i) for i in fetch]  # type: ignore
+        self.log.debug('Called!')
+        stmt = models.agent.select()
+        fetch = await self.db.fetch_all(stmt)
+        return [Agent.from_orm(i) for i in fetch]
 
-    @classmethod
-    async def get_order_by_uid(cls, uid: int) -> Order | None:
+    async def get_order_by_uid(self, uid: int) -> Order | None:
         '''Returns Order by UID.
 
         Args:
@@ -224,30 +163,29 @@ class Database:
         Returns:
             Order | None: Order if exists.
         '''
-        cls.log.debug(f'Called with args: ({uid})')
-        sql = 'SELECT * FROM orders WHERE uid=?'
-        params = (uid,)
-        fetch = await cls._dbcall_fetchone(sql, params)
+        self.log.debug(f'Called with args: ({uid})')
+        stmt = models.order.select().where(models.order.c.uid == uid)
+        fetch = await self.db.fetch_one(stmt, {'uid': uid})
         if fetch:
-            agent = await cls.get_agent_by_uid(fetch['agent_uid'])
+            agent = await self.get_agent_by_uid(fetch.agent_uid)
             if agent:
                 return Order(
-                    uid=fetch['uid'],
-                    name=fetch['name'],
-                    price=fetch['price'],
-                    agent_uid=fetch['agent_uid'],
+                    uid=fetch.uid,
+                    name=fetch.name,
+                    price=fetch.price,
+                    agent_uid=fetch.agent_uid,
                     agent=agent,
-                    start_date=fetch['start_date'],
-                    end_date=fetch.get('end_date', None)
+                    start_date=fetch.start_date,
+                    end_date=fetch.end_date
                 )
             else:
-                cls.log.error(
-                    f'Order #{fetch["uid"]} have nonexistent '
-                    f'Agent UID #{fetch["agent_uid"]}')
+                self.log.error(
+                    f'Order #{fetch.uid} have nonexistent '
+                    f'Agent UID #{fetch.agent_uid}')
         return None
 
-    @classmethod
-    async def end_order(cls, uid: int) -> Literal[True]:
+    @database.transaction()
+    async def end_order(self, uid: int) -> Literal[True]:
         '''Set end_date to Order by provided uid.
 
         Args:
@@ -256,14 +194,20 @@ class Database:
         Returns:
             Literal[True]: Always True.
         '''
-        cls.log.debug(f'Called with args: ({uid})')
-        sql = 'UPDATE orders SET end_date=? WHERE uid=?'
-        params = (date.today(), uid)
-        await cls._dbcall_commit(sql, params)
+        self.log.debug(f'Called with args: ({uid})')
+        end_date = date.today()
+        stmt = models.order.update().where(
+            models.order.c.uid == uid
+        ).values(
+            end_date=str(end_date)
+        )
+        await self.db.execute(stmt, {
+            'uid': uid, 'end_date': str(end_date)
+        })
         return True
 
-    @classmethod
-    async def del_order(cls, uid: int) -> Literal[True]:
+    @database.transaction()
+    async def del_order(self, uid: int) -> Literal[True]:
         '''Deletes order from DB.
 
         Args:
@@ -272,8 +216,10 @@ class Database:
         Returns:
             Literal[True]: Always True.
         '''
-        cls.log.debug(f'Called with args: ({uid})')
-        sql = 'DELETE FROM orders WHERE uid=?'
-        params = (uid,)
-        await cls._dbcall_commit(sql, params)
+        self.log.debug(f'Called with args: ({uid})')
+        stmt = models.order.delete().where(models.order.c.uid == uid)
+        await self.db.execute(stmt, {'uid': uid})
         return True
+
+
+db = Database()
