@@ -12,10 +12,13 @@ from database.main import db as Database
 from keyboards import Keyboards as keys
 
 
-@bot.message_handler(commands=['/start'], state='*')
-async def start_bot(msg: types.Message, state: FSMContext):
+log.info('Cmds "defaults" loaded!')
+
+
+@bot.message_handler(commands=['/start'])
+async def start_bot(msg: types.Message):
     log.info(f'Called by {msg.chat.mention} ({msg.chat.id})')
-    await state.finish()
+    # await state.finish()
     if msg.chat.id == cfg.admin_id:
         orders = await Database.get_orders()
         cnt = f'Привет {msg.chat.first_name}!\n\n'
