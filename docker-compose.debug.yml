@@ -7,8 +7,6 @@ services:
       context: .
       dockerfile: ./vk/Dockerfile
     command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 ./vk/main.py "]
-    volumes:
-      - ./tg/database:/tg/database:rw
     ports:
       - 5678:5678
 
@@ -17,8 +15,6 @@ services:
     build:
       context: .
       dockerfile: ./tg/Dockerfile
-    command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 ./tg/main.py "]
-    volumes:
-      - ./tg/database:/tg/database:rw
+    command: ["sh", "-c", "pip install debugpy -t /tmp && python /tmp/debugpy --wait-for-client --listen 0.0.0.0:5678 ./tg/start.py "]
     ports:
       - 5678:5678

@@ -19,6 +19,7 @@ else:
 class Config(BaseSettings):
     VERSION: str = '0.1'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
+    admin_id: int = Field(265300852, env='BOT_ADMINID')
     token: str = Field(..., env='BOT_TOKEN')
     postgres_dsn: PostgresDsn = Field(..., env='BOT_POSTGRESDSN')
 

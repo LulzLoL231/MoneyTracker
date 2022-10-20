@@ -7,14 +7,10 @@ services:
       context: .
       dockerfile: ./vk/Dockerfile
     command: "python3 /vk/main.py"
-    volumes:
-      - ./vk/database:/vk/database:rw
 
   moneytracker-tg:
     image: moneytracker-tg
     build:
       context: .
       dockerfile: ./tg/Dockerfile
-    command: "python3 /tg/main.py"
-    volumes:
-      - ./tg/database:/tg/database:rw
+    command: "python3 /tg/start.py"
