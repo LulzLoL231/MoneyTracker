@@ -7,7 +7,7 @@ from aiogram import types
 from aiogram.dispatcher.storage import FSMContext
 
 from config import cfg
-from ..runtimes import log, bot
+from runtimes import log, bot
 from database.main import db as Database
 from keyboards import Keyboards as keys
 
