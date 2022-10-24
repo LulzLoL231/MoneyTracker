@@ -7,6 +7,7 @@ services:
       context: .
       dockerfile: ./vk/Dockerfile
     command: "python3 /vk/main.py"
+    restart: always
 
   moneytracker-tg:
     image: moneytracker-tg
@@ -14,3 +15,4 @@ services:
       context: .
       dockerfile: ./tg/Dockerfile
     command: "python3 /tg/start.py"
+    restart: always
