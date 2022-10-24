@@ -287,7 +287,7 @@ async def add_order_end(msg: Message):
         payload = msg.state_peer.payload  # type: ignore
         order = await Database.add_order(
             payload.get('name', ''), int(payload.get('price', -1)),
-            int(payload.get('price', -1))
+            int(payload.get('agent_uid', -1))
         )
         cnt = f'Заказ #{order.uid} - создан!'
         key = keys.order_btn(order.uid)
