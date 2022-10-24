@@ -10,13 +10,13 @@ from database.types import Agent, Order
 
 class Keyboards:
     @staticmethod
-    def start() -> types.InlineKeyboardButton:
+    def start() -> types.InlineKeyboardMarkup:
         '''Returns start keyboard.
 
         Returns:
             types.InlineKeyboardButton: Tg inline keyboard.
         '''
-        key = types.InlineKeyboardButton()
+        key = types.InlineKeyboardMarkup()
         key.insert(types.InlineKeyboardButton(
             'Заказы',
             callback_data='orders'
@@ -27,8 +27,28 @@ class Keyboards:
         ))
         key.row()
         key.add(types.InlineKeyboardButton(
-            'о боте',
+            'О боте',
             callback_data='about'
+        ))
+        return key
+
+    @staticmethod
+    def back_btn(
+        data: str = 'start',
+        text: str = 'Назад'
+    ) -> types.InlineKeyboardMarkup:
+        '''Returns inline keyboard with back btn.
+
+        Args:
+            data (str): callback_data.
+            text (str): btn text.
+
+        Returns:
+            types.InlineKeyboardMarkup: Tg inline keyboard.
+        '''
+        key = types.InlineKeyboardMarkup()
+        key.add(types.InlineKeyboardButton(
+            text, callback_data=data
         ))
         return key
 
