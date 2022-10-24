@@ -5,7 +5,9 @@
 #
 import logging
 import platform
+from functools import wraps
 
+from aiogram import types
 from pydantic import BaseSettings, Field, PostgresDsn
 
 
@@ -17,7 +19,7 @@ else:
 
 
 class Config(BaseSettings):
-    VERSION: str = '0.1'
+    VERSION: str = '0.2'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     admin_id: int = Field(265300852, env='BOT_ADMINID')
     token: str = Field(..., env='BOT_TOKEN')
@@ -33,3 +35,35 @@ logging.basicConfig(
            '>> %(module)s.%(funcName)s: %(message)s',
     level=logging.DEBUG if cfg.DEBUG else logging.INFO
 )
+__seclog = logging.getLogger('moneytracker.check_admin')
+
+
+def check_admin():
+    def wrapper(func):
+        @wraps(func)
+        async def wrapped(*args, **kwargs):
+            if isinstance(args[0], types.CallbackQuery):
+                msg = args[0].message
+            elif isinstance(args[0], types.Message):
+                msg = args[0]
+            else:
+                __seclog.error(
+                    f'Unknown event type: {args[0]}!'
+                )
+                return
+            if msg.chat.id == cfg.admin_id:
+                __seclog.debug(
+                    f'User {msg.chat.mention} ({msg.chat.id}) '
+                    'is authenticated!'
+                )
+                return await func(*args, **kwargs)
+            else:
+                __seclog.warning(
+                    f'Unknown user {msg.chat.mention} ({msg.chat.id}) '
+                    'trying get access to bot!'
+                )
+                if msg.from_user.is_bot:
+                    await msg.delete()
+                await msg.answer('<b>В доступе отказано!</b>')
+        return wrapped
+    return wrapper
