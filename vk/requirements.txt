@@ -4,3 +4,4 @@ openpyxl
 databases[asyncpg]
 sqlalchemy[mypy]
 psycopg2
+async_lru

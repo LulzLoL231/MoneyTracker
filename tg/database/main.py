@@ -8,6 +8,7 @@ from datetime import date
 from typing import Literal
 
 import sqlalchemy as sa
+from async_lru import alru_cache
 from databases import DatabaseURL, Database as DB
 
 from config import cfg
@@ -58,6 +59,7 @@ class Database:
         uid = await self.db.execute(stmt1, {'name': name})
         return Agent(uid=uid, name=name)
 
+    @alru_cache
     async def get_agent_by_uid(self, uid: int) -> Agent | None:
         '''Returns agent by UID.
 
@@ -133,7 +135,7 @@ class Database:
         self.log.debug(f'Called with args: ({name}, {price}, {agent_uid})')
         values = {
             'name': name, 'price': price, 'agent_uid': agent_uid,
-            'start_date': str(date.today())
+            'start_date': date.today()
         }
         stmt = models.order.insert().values(**values)
         uid = await self.db.execute(stmt, values)
@@ -154,6 +156,7 @@ class Database:
         fetch = await self.db.fetch_all(stmt)
         return [Agent.from_orm(i) for i in fetch]
 
+    @alru_cache
     async def get_order_by_uid(self, uid: int) -> Order | None:
         '''Returns Order by UID.
 
@@ -199,10 +202,10 @@ class Database:
         stmt = models.order.update().where(
             models.order.c.uid == uid
         ).values(
-            end_date=str(end_date)
+            end_date=end_date
         )
         await self.db.execute(stmt, {
-            'uid': uid, 'end_date': str(end_date)
+            'uid': uid, 'end_date': end_date
         })
         return True
 
