@@ -171,7 +171,7 @@ class Keyboards:
         key = types.InlineKeyboardMarkup()
         key.add(types.InlineKeyboardButton(
             'Информация о заказе',
-            callback_data='order_info'
+            callback_data='info_order'
         ))
         key.add(types.InlineKeyboardButton(
             'Экспорт',

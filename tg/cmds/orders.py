@@ -355,7 +355,7 @@ async def end_order(query: types.CallbackQuery):
     await query_orders(query, bot.current_state(), True)
 
 
-@bot.callback_query_handler(lambda q: q.data == 'order_info')
+@bot.callback_query_handler(lambda q: q.data == 'info_order')
 @check_admin()
 async def order_info_start(query: types.CallbackQuery):
     log.info(
