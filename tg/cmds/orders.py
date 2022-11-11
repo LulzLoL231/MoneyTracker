@@ -412,6 +412,6 @@ async def export_order_history(query: types.CallbackQuery):
     await query.message.delete()
     await query.message.answer_document(
         types.InputFile(file, file_name),
-        caption='Файл готов.',
-        reply_markup=keys.back(text='На главную')
+        caption='Файл готов.'
     )
+    await query_orders(query, bot.current_state(), True)
