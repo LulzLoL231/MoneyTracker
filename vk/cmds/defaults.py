@@ -22,12 +22,12 @@ bp = BotBlueprint('defaults')
 async def start_bot(msg: Message):
     user = await msg.get_user()
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
-    orders = await Database.get_orders()
+    orders = await Database.get_inprogress_orders()
     cnt = f'Привет {user.first_name}!\n\n'
     if orders:
         cnt += 'Текущие заказы:\n'
         full_price = 0
-        for ord in filter((lambda o: not o.end_date), orders):
+        for ord in orders:
             cnt += f'{ord.get_short_str()}\n'
             full_price += ord.price
         cnt += f'\nИтого: {full_price} руб.'

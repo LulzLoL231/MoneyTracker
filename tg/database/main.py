@@ -105,6 +105,37 @@ class Database:
                         f'Agent UID #{ord.agent_uid}')
         return orders
 
+    async def get_inprogress_orders(self) -> list[Order]:
+        '''Returns all not ended orders.
+
+        Returns:
+            list[Order]: Array of orders.
+        '''
+        self.log.debug('Called!')
+        orders = []
+        stmt = models.order.select().where(
+            models.order.c.end_date != None  # noqa
+        )
+        fetch = await self.db.fetch_all(stmt)
+        if fetch:
+            for ord in fetch:
+                agent = await self.get_agent_by_uid(ord.agent_uid)
+                if agent:
+                    orders.append(Order(
+                        uid=ord.uid,
+                        name=ord.name,
+                        price=ord.price,
+                        agent_uid=ord.agent_uid,
+                        agent=agent,
+                        start_date=ord.start_date,
+                        end_date=ord.end_date
+                    ))
+                else:
+                    self.log.error(
+                        f'Order #{ord.uid} have nonexistent '
+                        f'Agent UID #{ord.agent_uid}')
+        return orders
+
     @database.transaction()
     async def del_agent(self, uid: int) -> Literal[True]:
         '''Deletes Agent from DB.

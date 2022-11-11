@@ -13,11 +13,11 @@ from pydantic import BaseSettings, Field, PostgresDsn
 if platform.system() == 'Linux':
     env_file = '/vk/.env'
 else:
-    env_file = '.env'
+    env_file = './vk/.env'
 
 
 class Config(BaseSettings):
-    VERSION: str = '1.0.3'
+    VERSION: str = '1.1'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     token: str = Field(..., env='BOT_TOKEN')
     postgres_dsn: PostgresDsn = Field(..., env='BOT_POSTGRESDSN')

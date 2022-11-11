@@ -18,12 +18,12 @@ async def start_bot(msg: types.Message, state: FSMContext, query=False):
     log.info(f'Called by {msg.chat.mention} ({msg.chat.id})')
     await state.finish()
     await types.ChatActions.typing()
-    orders = await Database.get_orders()
+    orders = await Database.get_inprogress_orders()
     cnt = f'Привет {msg.chat.first_name}!\n\n'
     if orders:
         cnt += 'Текущие заказы:\n'
         full_price = 0
-        for ord in filter((lambda o: not o.end_date), orders):
+        for ord in orders:
             cnt += f'{ord.get_short_str()}\n'
             full_price += ord.price
         cnt += f'\nИтого: {full_price} руб.'

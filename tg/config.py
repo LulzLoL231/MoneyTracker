@@ -15,11 +15,11 @@ from pydantic import BaseSettings, Field, PostgresDsn
 if platform.system() == 'Linux':
     env_file = '/tg/.env'
 else:
-    env_file = '.env'
+    env_file = './tg/.env'
 
 
 class Config(BaseSettings):
-    VERSION: str = '0.3.2'
+    VERSION: str = '0.4'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     admin_id: int = Field(265300852, env='BOT_ADMINID')
     token: str = Field(..., env='BOT_TOKEN')
