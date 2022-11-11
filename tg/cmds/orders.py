@@ -401,6 +401,7 @@ async def export_order_history(query: types.CallbackQuery):
     )
     await query.answer()
     await query.message.edit_text('<code>Файл готовится...</code>')
+    await query.message.answer_chat_action(types.ChatActions.UPLOAD_DOCUMENT)
     orders = await Database.get_orders()
     file = await make_export_file(orders)
     period = (
@@ -408,7 +409,9 @@ async def export_order_history(query: types.CallbackQuery):
         orders[::-1][0].start_date
     )
     file_name = f'Отчёт с {str(period[0])} по {str(period[1])}.xlsx'
-    await query.message.edit_media(
+    await query.message.delete()
+    await query.message.answer_document(
         types.InputFile(file, file_name),
+        caption='Файл готов.',
         reply_markup=keys.back(text='На главную')
     )
