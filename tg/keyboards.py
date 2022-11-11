@@ -33,7 +33,7 @@ class Keyboards:
         return key
 
     @staticmethod
-    def back_btn(
+    def back(
         data: str = 'start',
         text: str = 'Назад'
     ) -> types.InlineKeyboardMarkup:
@@ -184,23 +184,19 @@ class Keyboards:
         return key
 
     @staticmethod
-    def add_order_agents(agents: list[Agent]) -> types.ReplyKeyboardMarkup:
+    def add_order_agents(agents: list[Agent]) -> types.InlineKeyboardMarkup:
         '''Returns keyboard with agents.
 
         Args:
             agents (list[Agent]): Array of agents.
 
         Returns:
-            types.ReplyKeyboardMarkup: Tg reply keyboard.
+            types.InlineKeyboardMarkup: Tg inline keyboard.
         '''
-        key = types.ReplyKeyboardMarkup(
-            resize_keyboard=True,
-            one_time_keyboard=True,
-            row_width=2
-        )
+        key = types.InlineKeyboardMarkup(2)
         for agent in agents:
-            key.insert(types.KeyboardButton(
-                f'{agent.name} #{agent.uid}'
+            key.insert(types.InlineKeyboardButton(
+                agent.name, callback_data=f'agent_order#{agent.uid}'
             ))
         key.row()
         key.add(types.KeyboardButton(

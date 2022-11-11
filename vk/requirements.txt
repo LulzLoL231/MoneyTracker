@@ -1,7 +1,8 @@
 vkbottle
 pydantic[dotenv]
 openpyxl
-databases[asyncpg]
 sqlalchemy[mypy]
 psycopg2
 async_lru
+https://github.com/LulzLoL231/databases/archive/refs/heads/master.zip
+asyncpg

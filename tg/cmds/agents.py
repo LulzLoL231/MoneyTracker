@@ -45,7 +45,7 @@ async def add_agent(query: types.CallbackQuery):
     await query.answer()
     await query.message.edit_text(
         'Добавление нового агента.\n\nОтправьте имя агента.',
-        reply_markup=keys.back_btn('agents', 'Отмена')
+        reply_markup=keys.back('agents', 'Отмена')
     )
 
 
@@ -59,7 +59,7 @@ async def add_agent_finish(msg: types.Message, state: FSMContext):
     agent = await Database.add_agent(msg.text)
     await msg.answer(
         f'Агент #{agent.uid} - Добавлен!',
-        reply_markup=keys.back_btn('agents', 'К агентам')
+        reply_markup=keys.back('agents', 'К агентам')
     )
 
 

@@ -45,6 +45,16 @@ async def query_start(query: types.CallbackQuery, state: FSMContext):
     await start_bot(query.message, state, True)
 
 
+@bot.callback_query_handler(lambda q: q.data == 'cancel', state='*')
+@check_admin()
+async def query_cancel(query: types.CallbackQuery, state: FSMContext):
+    log.info(
+        f'Called by {query.message.chat.mention} ({query.message.chat.id})'
+    )
+    await query.answer('Действие отменено!', True)
+    await start_bot(query.message, state, True)
+
+
 @bot.callback_query_handler(lambda q: q.data == 'about')
 @check_admin()
 async def query_about(query: types.CallbackQuery):
@@ -62,4 +72,4 @@ async def about(msg: types.Message):
     log.info(f'Called by {msg.chat.mention} ({msg.chat.id})')
     cnt = 'MoneyTracker\nОтслеживаем оплату заказов.\n\n' \
         f'Автор: @LulzLoL231\nВерсия: {cfg.VERSION}'
-    await msg.answer(cnt, reply_markup=keys.back_btn())
+    await msg.answer(cnt, reply_markup=keys.back())
