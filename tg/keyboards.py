@@ -199,8 +199,8 @@ class Keyboards:
                 agent.name, callback_data=f'agent_order#{agent.uid}'
             ))
         key.row()
-        key.add(types.KeyboardButton(
-            'Отмена'
+        key.add(types.InlineKeyboardButton(
+            'Отмена', callback_data='orders'
         ))
         return key
 
