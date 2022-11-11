@@ -114,7 +114,7 @@ class Database:
         self.log.debug('Called!')
         orders = []
         stmt = models.order.select().where(
-            models.order.c.end_date != None  # noqa
+            models.order.c.end_date == None  # noqa
         )
         fetch = await self.db.fetch_all(stmt)
         if fetch:
