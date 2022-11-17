@@ -148,7 +148,7 @@ class Database:
         '''
         self.log.debug(f'Called with args: ({uid})')
         stmt = models.agent.delete().where(models.agent.c.uid == uid)
-        await self.db.execute(stmt, {'uid': uid})
+        await self.db.execute(stmt)
         return True
 
     @database.transaction()
@@ -252,7 +252,7 @@ class Database:
         '''
         self.log.debug(f'Called with args: ({uid})')
         stmt = models.order.delete().where(models.order.c.uid == uid)
-        await self.db.execute(stmt, {'uid': uid})
+        await self.db.execute(stmt)
         return True
 
 

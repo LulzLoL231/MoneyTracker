@@ -17,7 +17,7 @@ else:
 
 
 class Config(BaseSettings):
-    VERSION: str = '1.1'
+    VERSION: str = '1.1.1'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     token: str = Field(..., env='BOT_TOKEN')
     postgres_dsn: PostgresDsn = Field(..., env='BOT_POSTGRESDSN')
