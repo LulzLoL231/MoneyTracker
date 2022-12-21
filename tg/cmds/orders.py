@@ -305,6 +305,7 @@ async def add_order_end(query: types.CallbackQuery, state: FSMContext):
     order = await Database.add_order(
         data.get('name'), data.get('agent_uid'), price
     )
+    Database.get_order_by_uid.cache_clear()
     await state.finish()
     await query.answer()
     await query.message.edit_text(
@@ -372,6 +373,7 @@ async def del_order(query: types.CallbackQuery):
     )
     order_uid = int(query.data.split('#')[1])
     await Database.del_order(order_uid)
+    Database.get_order_by_uid.cache_clear()
     await query.answer(f'Заказ #{order_uid} - удалён!', True)
     await query_orders(query, bot.current_state(), True)
 
@@ -384,6 +386,7 @@ async def end_order(query: types.CallbackQuery):
     )
     order_uid = int(query.data.split('#')[1])
     await Database.end_order(order_uid)
+    Database.get_order_by_uid.cache_clear()
     await query.answer(f'Заказ #{order_uid} - оплачен!', True)
     await query_orders(query, bot.current_state(), True)
 
@@ -430,6 +433,7 @@ async def end_set_price_order(msg: types.Message, state: FSMContext):
         return
     await state.finish()
     await Database.set_order_price(order.uid, int(msg.text))
+    Database.get_order_by_uid.cache_clear()
     new_order = await Database.get_order_by_uid(data.get('order_uid'))
     if not new_order:
         await state.finish()

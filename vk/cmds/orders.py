@@ -336,6 +336,7 @@ async def add_order_end(msg: Message):
     else:
         cnt = 'Операция отменена!'
         key = keys.back('orders')
+    Database.get_order_by_uid.cache_clear()
     await bp.state_dispenser.delete(msg.peer_id)
     await msg.answer(cnt, keyboard=key)
 
@@ -395,6 +396,7 @@ async def del_order(msg: Message):
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
     await Database.del_order(order_uid)
+    Database.get_order_by_uid.cache_clear()
     await msg.answer(
         f'Заказ #{order_uid} - удалён!',
         keyboard=keys.back('orders')
@@ -408,6 +410,7 @@ async def end_order(msg: Message):
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
     await Database.end_order(order_uid)
+    Database.get_order_by_uid.cache_clear()
     await msg.answer(
         f'Заказ #{order_uid} - оплачен!',
         keyboard=keys.back('orders')
