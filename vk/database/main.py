@@ -13,7 +13,7 @@ from databases import DatabaseURL, Database as DB
 
 from config import cfg
 from . import models
-from .types import Agent, Order
+from .schemas import Agent, Order
 
 
 database = DB(str(cfg.postgres_dsn))
@@ -152,18 +152,20 @@ class Database:
         return True
 
     @database.transaction()
-    async def add_order(self, name: str, price: int, agent_uid: int) -> Order:
+    async def add_order(
+        self, name: str, agent_uid: int, price: int | None = None
+    ) -> Order:
         '''Add a new Order to DB.
 
         Args:
             name (str): Order name.
-            price (int): Order price.
             agent_uid (int): Agent UID.
+            price (int, optional): Order price. Defaults is None.
 
         Returns:
             Order: A created Order.
         '''
-        self.log.debug(f'Called with args: ({name}, {price}, {agent_uid})')
+        self.log.debug(f'Called with args: ({name}, {agent_uid}, {price})')
         values = {
             'name': name, 'price': price, 'agent_uid': agent_uid,
             'start_date': date.today()
@@ -252,6 +254,26 @@ class Database:
         '''
         self.log.debug(f'Called with args: ({uid})')
         stmt = models.order.delete().where(models.order.c.uid == uid)
+        await self.db.execute(stmt)
+        return True
+
+    @database.transaction()
+    async def set_order_price(self, uid: int, price: int) -> Literal[True]:
+        '''Sets order price.
+
+        Args:
+            uid (int): Order UID.
+            price (int): Order price.
+
+        Returns:
+            Literal[True]: Always True.
+        '''
+        self.log.debug(f'Called with args: ({uid}, {price})')
+        stmt = models.order.update().where(
+            models.order.c.uid == uid
+        ).values({
+            'price': price
+        })
         await self.db.execute(stmt)
         return True
 

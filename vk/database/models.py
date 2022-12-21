@@ -15,7 +15,7 @@ order = sa.Table(
     metadata,
     sa.Column('uid', sa.INTEGER, primary_key=True),
     sa.Column('name', sa.TEXT),
-    sa.Column('price', sa.INTEGER),
+    sa.Column('price', sa.INTEGER, nullable=True),
     sa.Column(
         'agent_uid', sa.INTEGER,
         sa.ForeignKey('agents.uid'), nullable=True, default=None

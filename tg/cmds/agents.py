@@ -7,7 +7,7 @@ from aiogram import types
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-from config import cfg, check_admin
+from config import check_admin
 from runtimes import log, bot
 from database.main import db as Database
 from keyboards import Keyboards as keys
@@ -57,6 +57,7 @@ async def add_agent_finish(msg: types.Message, state: FSMContext):
     log.info(f'Called by {msg.chat.mention} ({msg.chat.id})')
     await state.finish()
     agent = await Database.add_agent(msg.text)
+    Database.get_agent_by_uid.cache_clear()
     await msg.answer(
         f'Агент #{agent.uid} - Добавлен!',
         reply_markup=keys.back('agents', 'К агентам')
@@ -88,5 +89,6 @@ async def del_agent_end(query: types.CallbackQuery):
     )
     agent_uid = int(query.data.split('#')[1])
     await Database.del_agent(agent_uid)
+    Database.get_agent_by_uid.cache_clear()
     await query.answer(f'Агент #{agent_uid} - удален!')
     await agents(query, None)

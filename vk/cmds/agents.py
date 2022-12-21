@@ -63,6 +63,7 @@ async def add_agent_end(msg: Message):
         await agents(msg)
         return
     agent = await Database.add_agent(msg.text)
+    Database.get_agent_by_uid.cache_clear()
     await bp.state_dispenser.delete(msg.peer_id)
     await msg.answer(
         f'Агент #{agent.uid} - Добавлен!',
@@ -94,6 +95,7 @@ async def del_agent_end(msg: Message):
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     agent_uid = int(msg_payload_json['command'].split('#')[1])
     await Database.del_agent(agent_uid)
+    Database.get_agent_by_uid.cache_clear()
     await msg.answer(
         f'Агент #{agent_uid} - удален!',
         keyboard=keys.back('agents')

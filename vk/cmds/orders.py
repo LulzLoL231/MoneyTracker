@@ -15,7 +15,7 @@ from vkbottle.tools import DocMessagesUploader
 from vkbottle import BaseStateGroup, BotBlueprint
 from vkbottle.dispatch.rules.base import FuncRule, StateRule
 
-from database.types import Order
+from database.schemas import Order
 from keyboards import Keyboards as keys
 from database.main import db as Database
 
@@ -35,12 +35,33 @@ class OrderInfo(BaseStateGroup):
     UID = 'uid'
 
 
+class OrderPrice(BaseStateGroup):
+    PRICE = 'order_price'
+
+
 @dataclass
 class OrderShortcut:
     command: str
     name: str
     price: str
     agent: str
+
+
+def is_digit(data: str) -> bool:
+    '''Is digit in data?
+
+    Args:
+        data (str): Any string.
+
+    Returns:
+        bool: Boolean.
+    '''
+    try:
+        int(data)
+    except Exception:
+        return False
+    else:
+        return True
 
 
 async def make_export_file(orders: list[Order]) -> BytesIO:
@@ -75,7 +96,10 @@ async def make_export_file(orders: list[Order]) -> BytesIO:
     for order in orders:
         ws[f'A{rid}'] = order.uid
         ws[f'B{rid}'] = order.name
-        ws[f'C{rid}'] = order.price
+        if order.price:
+            ws[f'C{rid}'] = order.price
+        else:
+            ws[f'C{rid}'] = 'Н/д'
         ws[f'D{rid}'] = order.agent.name
         ws[f'E{rid}'] = str(order.start_date)
         if order.end_date:
@@ -104,6 +128,12 @@ def is_del_order_cmd(payload: str | None) -> bool:
 def is_end_order_cmd(payload: str | None) -> bool:
     if payload:
         return json.loads(payload).get('command', '').startswith('end_order#')
+    return False
+
+
+def is_set_price_order_cmd(payload: str | None) -> bool:
+    if payload:
+        return json.loads(payload).get('command', '').startswith('set_price_order#')
     return False
 
 
@@ -143,7 +173,7 @@ async def create_order_shortcut(msg: Message):
         return
     else:
         agent = agent_l[0]
-    if not order.price.isdigit():
+    if not is_digit(order.price):
         log.warning(
             f'User #{msg.peer_id} use not digit in order price!'
         )
@@ -186,7 +216,8 @@ async def orders(msg: Message):
         full_price = 0
         for ord in inprog_orders:
             cnt += f'{ord.get_short_str()}\n'
-            full_price += ord.price
+            if ord.price:
+                full_price += ord.price
         cnt += f'\nИтого: {full_price} руб.'
     await msg.answer(cnt, keyboard=keys.orders(inprog_orders, bool(orders)))
 
@@ -214,7 +245,7 @@ async def add_order_name(msg: Message):
     await bp.state_dispenser.set(msg.peer_id, AddOrder.PRICE, name=msg.text)
     await msg.answer(
         'Введите цену заказа.',
-        keyboard=keys.back('orders')
+        keyboard=keys.no_price()
     )
 
 
@@ -227,7 +258,7 @@ async def add_order_price(msg: Message):
         log.info(f'User #{msg.peer_id} canceled adding order.')
         await orders(msg)
         return
-    elif not msg.text.isdigit():
+    elif msg.text.lower() != 'Нету цены' and not msg.text.isdigit():
         await msg.answer(
             'ОШИБКА: В качестве цены должно выступать цифровое значение!'
             '\nПовторите ввод.',
@@ -236,8 +267,12 @@ async def add_order_price(msg: Message):
         return
     agents = await Database.get_agents()
     if agents:
+        if msg.text.lower() != 'Нету цены':
+            price = None
+        else:
+            price = int(msg.text)
         await bp.state_dispenser.set(
-            msg.peer_id, AddOrder.AGENT, price=int(msg.text),
+            msg.peer_id, AddOrder.AGENT, price=price,
             name=msg.state_peer.payload.get('name')  # type: ignore
         )
         cnt = 'Выберите агента'
@@ -273,7 +308,10 @@ async def verify_add_order(msg: Message):
         name=s_payload.get('name'), price=s_payload.get('price')
     )
     cnt += f'Цель: {s_payload.get("name")}\n'
-    cnt += f'Цена: {s_payload.get("price")}\n'
+    if s_payload.get('price'):
+        cnt += f'Цена: {s_payload.get("price")}\n'
+    else:
+        cnt += 'Цена: Нету цены\n'
     cnt += f'Агент: {agent.name}\n\n'
     cnt += 'Создать заказ?'
     await msg.answer(cnt, keyboard=keys.verify())
@@ -285,15 +323,20 @@ async def add_order_end(msg: Message):
     log.info(f'Called by {user.first_name} {user.last_name} ({user.id})')
     if msg.text in keys.YES_TEXTS:
         payload = msg.state_peer.payload  # type: ignore
+        if payload.get('price'):
+            price = int(payload.get('price'))
+        else:
+            price = None
         order = await Database.add_order(
-            payload.get('name', ''), int(payload.get('price', -1)),
-            int(payload.get('agent_uid', -1))
+            payload.get('name', ''), int(payload.get('agent_uid', -1)),
+            price
         )
         cnt = f'Заказ #{order.uid} - создан!'
         key = keys.order_btn(order.uid)
     else:
         cnt = 'Операция отменена!'
         key = keys.back('orders')
+    Database.get_order_by_uid.cache_clear()
     await bp.state_dispenser.delete(msg.peer_id)
     await msg.answer(cnt, keyboard=key)
 
@@ -308,7 +351,7 @@ async def order(msg: Message):
     if order:
         await msg.answer(
             order.get_full_str(),
-            keyboard=keys.order_ctrl(order.uid)
+            keyboard=keys.order_ctrl(order)
         )
     else:
         await msg.answer(
@@ -333,7 +376,8 @@ async def orders_history(msg: Message):
         for ord in ended_orders:
             flag = True
             cnt += f'{ord.get_short_str()}\n'
-            full_price += ord.price
+            if ord.price:
+                full_price += ord.price
         if not flag:
             cnt += 'Пока-что ни один заказ не был оплачен.'
         else:
@@ -352,6 +396,7 @@ async def del_order(msg: Message):
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
     await Database.del_order(order_uid)
+    Database.get_order_by_uid.cache_clear()
     await msg.answer(
         f'Заказ #{order_uid} - удалён!',
         keyboard=keys.back('orders')
@@ -365,6 +410,7 @@ async def end_order(msg: Message):
     msg_payload_json: dict = msg.get_payload_json()  # type: ignore
     order_uid = int(msg_payload_json.get('command', '#').split('#')[1])
     await Database.end_order(order_uid)
+    Database.get_order_by_uid.cache_clear()
     await msg.answer(
         f'Заказ #{order_uid} - оплачен!',
         keyboard=keys.back('orders')

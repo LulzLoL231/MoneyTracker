@@ -5,7 +5,7 @@
 #
 from vkbottle import Keyboard, KeyboardButtonColor, Text
 
-from database.types import Agent, Order
+from database.schemas import Agent, Order
 
 
 class Keyboards:
@@ -177,11 +177,11 @@ class Keyboards:
         return key.get_json()
 
     @staticmethod
-    def order_ctrl(uid: int) -> str:
+    def order_ctrl(order: Order) -> str:
         '''Returns order control keyboard.
 
         Args:
-            uid (int): Order UID.
+            order (Order): Order object.
 
         Returns:
             str: JSON string.
@@ -190,17 +190,25 @@ class Keyboards:
         key.add(
             Text(
                 'Оплачен',
-                {'command': f'end_order#{uid}'}
+                {'command': f'end_order#{order.uid}'}
             ),
             KeyboardButtonColor.POSITIVE
         )
         key.add(
             Text(
                 'Удалить',
-                {'command': f'del_order#{uid}'}
+                {'command': f'del_order#{order.uid}'}
             ),
             KeyboardButtonColor.NEGATIVE
         ).row()
+        if not order.price:
+            key.add(
+                Text(
+                    'Установить цену',
+                    {'command': f'set_price_order#{order.uid}'}
+                ),
+                KeyboardButtonColor.POSITIVE
+            ).row()
         key.add(
             Text(
                 'Назад',
@@ -294,6 +302,29 @@ class Keyboards:
                 {'command': f'order#{uid}'}
             ),
             KeyboardButtonColor.POSITIVE
+        ).row()
+        key.add(
+            Text(
+                'Назад',
+                {'command': 'orders'}
+            ),
+            KeyboardButtonColor.SECONDARY
+        )
+        return key.get_json()
+
+    @staticmethod
+    def no_price() -> str:
+        '''Returns keyboard with no_price btn.
+
+        Returns:
+            str: JSON string.
+        '''
+        key = Keyboard(True)
+        key.add(
+            Text(
+                'Нету цены'
+            ),
+            KeyboardButtonColor.NEGATIVE
         ).row()
         key.add(
             Text(
