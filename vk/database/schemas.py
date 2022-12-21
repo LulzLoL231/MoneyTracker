@@ -31,7 +31,7 @@ class Order(BaseModel):
     def get_full_str(self) -> str:
         tmp_cnt = '''Заказ #{}
 Цель: {}
-Цена: {} руб.
+Цена: {}
 Агент: {}
 {}'''
         tmp_sd = 'Начало: {}'
@@ -39,7 +39,7 @@ class Order(BaseModel):
         if not self.price:
             price = 'Не установлена'
         else:
-            price = str(self.price)
+            price = str(self.price) + ' руб.'
         if not self.end_date:
             return tmp_cnt.format(
                 self.uid, self.name, price,
@@ -57,8 +57,8 @@ class Order(BaseModel):
 
     def get_short_str(self) -> str:
         if not self.price:
-            price = 'Н/д'
+            price = 'на не установленную сумму.'
         else:
-            price = str(self.price)
-        tmp_cnt = 'Заказ #{} на сумму {} руб.'
+            price = f'на сумму {self.price} руб.'
+        tmp_cnt = 'Заказ #{} {}'
         return tmp_cnt.format(self.uid, price)
