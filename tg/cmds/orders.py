@@ -438,7 +438,7 @@ async def end_set_price_order(msg: types.Message, state: FSMContext):
         await msg.answer(cnt, reply_markup=key)
         return
     cnt = f'<b>Цена установлена</b>\n\n{new_order.get_full_str()}'
-    await msg.answer(cnt, keys.order_ctrl(new_order))
+    await msg.answer(cnt, reply_markup=keys.order_ctrl(new_order))
 
 
 @bot.callback_query_handler(lambda q: q.data == 'info_order')
