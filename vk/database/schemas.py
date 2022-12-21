@@ -19,7 +19,7 @@ class Agent(BaseModel):
 class Order(BaseModel):
     uid: int
     name: str
-    price: int
+    price: int | None = None
     agent_uid: int
     agent: Agent
     start_date: date
@@ -36,21 +36,29 @@ class Order(BaseModel):
 {}'''
         tmp_sd = 'Начало: {}'
         tmp_sd_ed = 'Начало: {}\nКонец: {}'
+        if not self.price:
+            price = 'Не установлена'
+        else:
+            price = str(self.price)
         if not self.end_date:
             return tmp_cnt.format(
-                self.uid, self.name, self.price,
+                self.uid, self.name, price,
                 self.agent.name, tmp_sd.format(
                     str(self.start_date)
                 )
             )
         else:
             return tmp_cnt.format(
-                self.uid, self.name, self.price,
+                self.uid, self.name, price,
                 self.agent.name, tmp_sd_ed.format(
                     str(self.start_date), str(self.end_date)
                 )
             )
 
     def get_short_str(self) -> str:
+        if not self.price:
+            price = 'Н/д'
+        else:
+            price = str(self.price)
         tmp_cnt = 'Заказ #{} на сумму {} руб.'
-        return tmp_cnt.format(self.uid, self.price)
+        return tmp_cnt.format(self.uid, price)
