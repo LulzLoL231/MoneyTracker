@@ -19,7 +19,7 @@ else:
 
 
 class Config(BaseSettings):
-    VERSION: str = '0.4.4'
+    VERSION: str = '0.5.0'
     DEBUG: bool = Field(False, env='BOT_DEBUG')
     admin_id: int = Field(265300852, env='BOT_ADMINID')
     token: str = Field(..., env='BOT_TOKEN')

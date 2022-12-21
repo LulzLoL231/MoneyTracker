@@ -7,7 +7,7 @@ from aiogram import types
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-from config import cfg, check_admin
+from config import check_admin
 from runtimes import log, bot
 from database.main import db as Database
 from keyboards import Keyboards as keys

@@ -13,6 +13,7 @@ from keyboards import Keyboards as keys
 
 
 @bot.message_handler(commands=['start'], state='*')
+@bot.message_handler(regexp='Отмена', state='*')
 @check_admin()
 async def start_bot(msg: types.Message, state: FSMContext, query=False):
     log.info(f'Called by {msg.chat.mention} ({msg.chat.id})')
@@ -25,7 +26,8 @@ async def start_bot(msg: types.Message, state: FSMContext, query=False):
         full_price = 0
         for ord in orders:
             cnt += f'{ord.get_short_str()}\n'
-            full_price += ord.price
+            if ord.price:
+                full_price += ord.price
         cnt += f'\nИтого: {full_price} руб.'
     else:
         cnt += 'Все заказы выполнены.'

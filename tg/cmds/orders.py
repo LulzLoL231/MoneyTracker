@@ -12,9 +12,9 @@ from aiogram import types
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.dispatcher.filters.state import State, StatesGroup
 
-from config import cfg, check_admin
+from config import check_admin
 from runtimes import log, bot
-from database.types import Order
+from database.schemas import Order
 from database.main import db as Database
 from keyboards import Keyboards as keys
 
@@ -36,6 +36,27 @@ class AddOrder(StatesGroup):
 
 class OrderInfo(StatesGroup):
     UID = State()
+
+
+class OrderPrice(StatesGroup):
+    PRICE = State()
+
+
+def is_digit(data: str) -> bool:
+    '''Is digit in data?
+
+    Args:
+        data (str): Any string.
+
+    Returns:
+        bool: Boolean.
+    '''
+    try:
+        int(data)
+    except Exception:
+        return False
+    else:
+        return True
 
 
 async def make_export_file(orders: list[Order]) -> BytesIO:
@@ -70,7 +91,10 @@ async def make_export_file(orders: list[Order]) -> BytesIO:
     for order in orders:
         ws[f'A{rid}'] = order.uid
         ws[f'B{rid}'] = order.name
-        ws[f'C{rid}'] = order.price
+        if order.price:
+            ws[f'C{rid}'] = order.price
+        else:
+            ws[f'C{rid}'] = 'Н/д'
         ws[f'D{rid}'] = order.agent.name
         ws[f'E{rid}'] = str(order.start_date)
         if order.end_date:
@@ -115,7 +139,7 @@ async def create_order_shortcut(msg: types.Message, state: FSMContext):
         return
     else:
         agent = agent_l[0]
-    if not order.price.isdigit():
+    if not is_digit(order.price):
         log.warning(
             f'User #{msg.chat.id} use not digit in order price!'
         )
@@ -154,7 +178,8 @@ async def query_orders(
         full_price = 0
         for ord in inprog_orders:
             cnt += f'{ord.get_short_str()}\n'
-            full_price += ord.price
+            if ord.price:
+                full_price += ord.price
         cnt += f'\nИтого: {full_price} руб.'
     if not only_edit:
         await query.answer()
@@ -197,7 +222,7 @@ async def add_order_name(msg: types.Message, state: FSMContext):
     await state.update_data(name=msg.text)
     await msg.answer(
         '<b>Добавление заказа</b>\n\nВведите цену заказа.',
-        reply_markup=keys.back(text='Отмена')
+        reply_markup=keys.no_price()
     )
 
 
@@ -207,11 +232,11 @@ async def add_order_name(msg: types.Message, state: FSMContext):
 @check_admin()
 async def add_order_price(msg: types.Message, state: FSMContext):
     log.info(f'Called by {msg.chat.mention} ({msg.chat.id})')
-    if not msg.text.isdigit():
+    if msg.text != 'Нету цены' and not is_digit(msg.text):
         await msg.answer(
             'ОШИБКА: В качестве цены должно выступать цифровое значение!'
             '\nПовторите ввод.',
-            reply_markup=keys.back(text='Отмена')
+            reply_markup=keys.no_price()
         )
         return
     await AddOrder.AGENT.set()
@@ -219,7 +244,10 @@ async def add_order_price(msg: types.Message, state: FSMContext):
     if agents:
         cnt = 'Выберите агента'
         key = keys.add_order_agents(agents)
-        await state.update_data(price=int(msg.text))
+        if msg.text == 'Нету цены':
+            await state.update_data(price=msg.text)
+        else:
+            await state.update_data(price=int(msg.text))
     else:
         cnt = 'Нету доступных агентов. Сначала добавьте хотя-бы одного.'
         key = keys.back('agents', 'к Агентам')
@@ -270,8 +298,12 @@ async def add_order_end(query: types.CallbackQuery, state: FSMContext):
         f'Called by {query.message.chat.mention} ({query.message.chat.id})'
     )
     data = await state.get_data()
+    if data.get('price') == 'Нету цены':
+        price = None
+    else:
+        price = data.get('price')
     order = await Database.add_order(
-        data.get('name'), data.get('price'), data.get('agent_uid')
+        data.get('name'), data.get('agent_uid'), price
     )
     await state.finish()
     await query.answer()
@@ -292,7 +324,7 @@ async def order(query: types.CallbackQuery):
     if order:
         await query.answer()
         await query.message.edit_text(
-            order.get_full_str(), reply_markup=keys.order_ctrl(order.uid)
+            order.get_full_str(), reply_markup=keys.order_ctrl(order)
         )
     else:
         await query.answer()
@@ -320,7 +352,8 @@ async def ordres_history(query: types.CallbackQuery):
         for ord in ended_orders:
             flag = True
             cnt += f'{ord.get_short_str()}\n'
-            full_price += ord.price
+            if ord.price:
+                full_price += ord.price
         if not flag:
             cnt += 'Пока-что ни один заказ не был оплачен.'
         else:
@@ -355,6 +388,59 @@ async def end_order(query: types.CallbackQuery):
     await query_orders(query, bot.current_state(), True)
 
 
+@bot.callback_query_handler(lambda q: q.data.startswith('set_price_order'))
+@check_admin()
+async def start_set_price_order(query: types.CallbackQuery):
+    log.info(
+        f'Called by {query.message.chat.mention} ({query.message.chat.id})'
+    )
+    order_uid = int(query.data.split('#')[1])
+    await OrderPrice.PRICE.set()
+    state = bot.current_state()
+    await state.update_data(order_uid=order_uid)
+    cnt = f'<b>Установка цены для Заказа #{order_uid}</b>\n\n'
+    cnt += 'Введите цену в рублях.'
+    key = keys.back(f'order#{order_uid}', 'Отмена')
+    await query.answer()
+    await query.message.edit_text(cnt, reply_markup=key)
+
+
+@bot.message_handler(content_types=types.ContentTypes.TEXT, state=OrderPrice.PRICE)
+@check_admin()
+async def end_set_price_order(msg: types.Message, state: FSMContext):
+    log.info(f'Called by {msg.chat.mention} ({msg.chat.id})')
+    data = await state.get_data()
+    if not is_digit(msg.text):
+        cnt = '<b>ОШИБКА:</b> Введено не число. Попробуйте ещё раз.'
+        key = keys.back(f'order#{data.get("order_uid")}', 'Отмена')
+        await msg.answer(cnt, reply_markup=key)
+        return
+    order = await Database.get_order_by_uid(data.get('order_uid'))
+    if not order:
+        await state.finish()
+        cnt = f'<b>ОШИБКА:</b> Заказ {data.get("order_uid")} не найден!'
+        key = keys.back('orders')
+        await msg.answer(cnt, reply_markup=key)
+        return
+    if order.price:
+        await state.finish()
+        cnt = f'<b>ОШИБКА:</b> Цена для Заказа {data.get("order_uid")} уже установлена!'
+        key = keys.back('orders')
+        await msg.answer(cnt, reply_markup=key)
+        return
+    await state.finish()
+    await Database.set_order_price(order.uid, int(msg.text))
+    new_order = await Database.get_order_by_uid(data.get('order_uid'))
+    if not new_order:
+        await state.finish()
+        cnt = f'<b>ОШИБКА:</b> Заказ {data.get("order_uid")} не найден! (ERR2)'
+        key = keys.back('orders')
+        await msg.answer(cnt, reply_markup=key)
+        return
+    cnt = f'<b>Цена установлена</b>\n\n{new_order.get_full_str()}'
+    await msg.answer(cnt, keys.order_ctrl(new_order))
+
+
 @bot.callback_query_handler(lambda q: q.data == 'info_order')
 @check_admin()
 async def order_info_start(query: types.CallbackQuery):
@@ -385,7 +471,7 @@ async def end_order_info(msg: types.Message, state: FSMContext):
     order = await Database.get_order_by_uid(int(msg.text))
     if order:
         await msg.answer(
-            order.get_full_str(), reply_markup=keys.order_ctrl(order.uid)
+            order.get_full_str(), reply_markup=keys.order_ctrl(order)
         )
     else:
         await msg.answer(

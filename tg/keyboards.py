@@ -5,7 +5,7 @@
 #
 from aiogram import types
 
-from database.types import Agent, Order
+from database.schemas import Agent, Order
 
 
 class Keyboards:
@@ -137,11 +137,11 @@ class Keyboards:
         return key
 
     @staticmethod
-    def order_ctrl(uid: int) -> types.InlineKeyboardMarkup:
+    def order_ctrl(order: Order) -> types.InlineKeyboardMarkup:
         '''Returns order control keyboard.
 
         Args:
-            uid (int): Order UID.
+            order (Order): Order object.
 
         Returns:
             types.InlineKeyboardMarkup: Tg inline keyboard.
@@ -149,12 +149,17 @@ class Keyboards:
         key = types.InlineKeyboardMarkup(2)
         key.insert(types.InlineKeyboardButton(
             'Оплачен',
-            callback_data=f'end_order#{uid}'
+            callback_data=f'end_order#{order.uid}'
         ))
         key.insert(types.InlineKeyboardButton(
             'Удалить',
-            callback_data=f'del_order#{uid}'
+            callback_data=f'del_order#{order.uid}'
         ))
+        if not order.price:
+            key.row(types.InlineKeyboardButton(
+                'Установить цену',
+                callback_data=f'set_price_order#{order.uid}'
+            ))
         key.add(types.InlineKeyboardButton(
             'Назад',
             callback_data='orders'
@@ -239,5 +244,24 @@ class Keyboards:
         key.add(types.InlineKeyboardButton(
             'Назад',
             callback_data='orders'
+        ))
+        return key
+
+    @staticmethod
+    def no_price() -> types.ReplyKeyboardMarkup:
+        '''Returns keyboard with no_price btn.
+
+        Returns:
+            types.ReplyKeyboardMarkup: Tg reply keyboard.
+        '''
+        key = types.ReplyKeyboardMarkup(
+            resize_keyboard=True, one_time_keyboard=True
+        )
+        key.add(types.KeyboardButton(
+            'Нету цены'
+        ))
+        key.row()
+        key.add(types.KeyboardButton(
+            'Отмена'
         ))
         return key
